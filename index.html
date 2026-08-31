@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f12">
+<title>360</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/unbounded@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/unbounded@5/700.css">
+<style>
+:root{
+  --bg:#0f0f12;
+  --ink:#f5efe2;
+  --line:rgba(245,239,226,.28);
+  --line-soft:rgba(245,239,226,.14);
+  --accent:rgba(255,205,150,.55);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:'Unbounded',system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;
+  padding:14px;
+  padding-top:calc(14px + env(safe-area-inset-top));
+  padding-bottom:calc(14px + env(safe-area-inset-bottom));
+  text-align:center;position:relative;
+}
+body::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(55% 45% at 50% 42%,rgba(255,180,120,.08),transparent 70%),
+             radial-gradient(45% 40% at 20% 85%,rgba(155,92,246,.06),transparent 70%);
+}
+
+.frame-outer{position:absolute;inset:6px;border:1px solid var(--line-soft);pointer-events:none}
+.frame-outer::before,.frame-outer::after{
+  content:"";position:absolute;left:50%;transform:translateX(-50%);
+  width:18px;height:1px;background:var(--line-soft);
+}
+.frame-outer::before{top:-1px}
+.frame-outer::after{bottom:-1px}
+.frame-inner{position:absolute;inset:10px;border:1px solid var(--line-soft);pointer-events:none}
+
+.corner{position:absolute;width:9px;height:9px;border:1px solid var(--accent);pointer-events:none}
+.corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
+.corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
+.corner.bl{bottom:6px;left:6px;border-right:none;border-top:none}
+.corner.br{bottom:6px;right:6px;border-left:none;border-top:none}
+
+.dot{position:absolute;width:2px;height:2px;border-radius:50%;background:var(--accent);pointer-events:none}
+.dot.tl{top:6px;left:6px;transform:translate(-50%,-50%)}
+.dot.tr{top:6px;right:6px;transform:translate(50%,-50%)}
+.dot.bl{bottom:6px;left:6px;transform:translate(-50%,50%)}
+.dot.br{bottom:6px;right:6px;transform:translate(50%,50%)}
+
+.content{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;align-items:center;
+  gap:clamp(14px,3vh,22px);
+  max-width:380px;width:100%;
+}
+
+.logo{
+  width:clamp(44px,12vw,64px);height:clamp(44px,12vw,64px);
+  opacity:0;animation:fadeUp 1s cubic-bezier(.2,1,.3,1) forwards;
+  filter:drop-shadow(0 0 10px rgba(255,200,140,.18));
+}
+.logo svg{width:100%;height:100%;display:block}
+
+.divider{
+  display:flex;align-items:center;gap:8px;
+  width:40%;opacity:0;animation:fadeIn 1s ease .3s forwards;
+}
+.divider .line{flex:1;height:1px;background:var(--line)}
+.divider .diamond{width:4px;height:4px;transform:rotate(45deg);border:1px solid var(--accent)}
+
+.task-wrap{
+  position:relative;
+  padding:clamp(18px,4.5vw,26px) clamp(16px,4vw,24px);
+  width:100%;
+  opacity:0;animation:fadeUp 1s cubic-bezier(.2,1,.3,1) .4s forwards;
+}
+.task-wrap::before{
+  content:"";position:absolute;inset:0;border:1px solid var(--line);
+}
+.task-wrap .c{position:absolute;width:7px;height:7px;border:1px solid var(--accent)}
+.task-wrap .c.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.task-wrap .c.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
+.task-wrap .c.bl{bottom:-1px;left:-1px;border-right:none;border-top:none}
+.task-wrap .c.br{bottom:-1px;right:-1px;border-left:none;border-top:none}
+
+.task{
+  font-weight:400;font-size:clamp(16px,4.4vw,22px);line-height:1.5;
+  letter-spacing:-.005em;
+  color:var(--ink);
+}
+
+.film{
+  position:absolute;inset:0;
+  overflow:hidden;
+  cursor:grab;
+  touch-action:none;
+  transition:opacity .7s ease, filter .7s ease;
+}
+.film canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  display:block;
+}
+.film.hint::after{
+  content:"Сотри, чтобы открыть ✨";
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  font-family:'Unbounded',sans-serif;
+  font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(40,30,20,.75);
+  pointer-events:none;
+  white-space:nowrap;
+  text-shadow:0 1px 0 rgba(255,255,255,.3);
+  animation:pulse 2.4s ease-in-out infinite;
+}
+.film.partial::after{
+  content:"Сотри полностью ✨";
+  animation:pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse{
+  0%,100%{opacity:.55}
+  50%{opacity:.95}
+}
+.film.revealing{
+  opacity:0;
+  filter:blur(8px);
+  pointer-events:none;
+}
+
+/* Индикатор прогресса стирания */
+.progress{
+  position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);
+  font-size:9px;letter-spacing:.15em;text-transform:uppercase;
+  color:rgba(245,239,226,.5);font-weight:400;
+  opacity:0;transition:opacity .3s;
+  white-space:nowrap;
+  pointer-events:none;
+}
+.progress.show{opacity:1}
+
+.footer{
+  position:relative;
+  padding:5px 14px;
+  font-size:8px;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(245,239,226,.55);font-weight:400;
+  opacity:0;animation:fadeIn 1s ease .7s forwards;
+}
+.footer::before{content:"";position:absolute;inset:0;border:1px solid var(--line-soft)}
+.footer .mini{position:absolute;width:2.5px;height:2.5px;background:var(--accent);transform:rotate(45deg)}
+.footer .mini.l{left:-1.25px;top:50%;transform:translate(-50%,-50%) rotate(45deg)}
+.footer .mini.r{right:-1.25px;top:50%;transform:translate(50%,-50%) rotate(45deg)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="frame-outer"></div>
+<div class="frame-inner"></div>
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+<div class="dot tl"></div>
+<div class="dot tr"></div>
+<div class="dot bl"></div>
+<div class="dot br"></div>
+
+<div class="content">
+
+  <div class="logo">
+    <svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g1" x1="-100" y1="-100" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#fff4dd"/>
+          <stop offset="50%" stop-color="#ffd29a"/>
+          <stop offset="100%" stop-color="#ff8e53"/>
+        </linearGradient>
+      </defs>
+      <path d="M 0 -92 Q 6 -6 92 0 Q 6 6 0 92 Q -6 6 -92 0 Q -6 -6 0 -92 Z" fill="url(#g1)"/>
+      <path d="M 0 -92 Q 6 -6 92 0 Q 6 6 0 92 Q -6 6 -92 0 Q -6 -6 0 -92 Z"
+            fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".6" transform="scale(.72)"/>
+      <path d="M 0 -18 Q 1.5 -1.5 18 0 Q 1.5 1.5 0 18 Q -1.5 1.5 -18 0 Q -1.5 -1.5 0 -18 Z"
+            fill="#fff" opacity=".9"/>
+    </svg>
+  </div>
+
+  <div class="divider">
+    <div class="line"></div>
+    <div class="diamond"></div>
+    <div class="line"></div>
+  </div>
+
+  <div class="task-wrap" id="taskWrap">
+    <span class="c tl"></span>
+    <span class="c tr"></span>
+    <span class="c bl"></span>
+    <span class="c br"></span>
+    <div class="task" id="task"></div>
+    <div class="film hint" id="film">
+      <canvas id="filmCanvas"></canvas>
+    </div>
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <div class="footer">
+    <span class="mini l"></span>
+    новое задание каждый день
+    <span class="mini r"></span>
+  </div>
+
+</div>
+
+<script>
+const TASKS=[
+'Купи в магазине свежий хлеб','Закупи молоко и сыр','Купи связку бананов','Выбери сезонные фрукты','Купи небольшой букет цветов',
+'Купи свечу для уюта','Выбери чай с новым вкусом','Сходи на рынок за овощами','Купи баночку мёда','Возьми любимый сок',
+'Сходи в магазин за продуктами для завтрака','Купи мороженое и съешь его на улице','Купи лимон и сделай лимонад','Возьми макароны и банку соуса','Купи яйца и сливочное масло',
+'Купи сухофрукты и орехи','Сходи в пекарню за свежей выпечкой','Купи шоколадку в подарок','Возьми зелень: укроп или петрушку','Сходи за рыбой на ужин',
+'Купи специи для любимого блюда','Возьми пачку цветных стикеров','Купи новую зубную щётку','Возьми губки и средство для уборки','Купи батарейки для дома',
+'Выбери шампунь или гель для душа','Купи маленький пакетик конфет','Сходи в магазин за йогуртом','Купи овсянку для завтрака','Возьми лампочку для дома',
+'Купи пирожное или булочку','Возьми замороженные ягоды','Сходи в канцелярский за ручкой и блокнотом','Купи растение в горшке','Купи пакет яблок',
+'Возьми гранолу или хлопья','Выбери томатную пасту или консервированные томаты','Купи сливки для кофе','Сходи за хлебом и молоком на вечер','Купи упаковку хорошего чая в подарок',
+'Возьми маленький пакет кофе в зёрнах','Купи продукты для салата','Выбери детскую книгу или комикс','Возьми стиральный порошок','Купи кусок мыла ручной работы',
+'Сходи в магазин за творогом','Возьми варенье или джем','Купи пакет апельсинов','Возьми упаковку макарон','Выбери сыр и колбасу на завтрак',
+'Купи маленькую бутылочку оливкового масла','Сходи в магазин за водой','Возьми зефир или сладость к чаю','Купи салфетки или бумажные полотенца','Выбери новую губку и перчатки для посуды',
+'Купи немного сыра','Сходи в пекарню за бубликом','Возьми сезонные ягоды','Купи маленький подарок без повода','Сходи в магазин со списком и купи всё по списку',
+'Скажи искренний комплимент близкому человеку','Позвони родителям просто поболтать','Напиши тёплое сообщение старому другу','Приготовь чай или кофе для кого-то из домашних','Придержи дверь для человека позади тебя',
+'Оставь хороший отзыв любимому месту','Подари цветок кому-нибудь на улице','Приготовь что-нибудь вкусное для семьи','Обними близких не меньше трёх раз за день','Напиши записку с благодарностью тому, кто тебе помог',
+'Пропусти кого-нибудь вперёд в очереди','Расскажи другу, за что ты его ценишь','Сделай соседке или соседу маленький подарок','Предложи помощь коллеге или однокурснику','Отправь открытку или письмо родным',
+'Оставь чаевые и добрые слова курьеру или бариста','Позвони бабушке или дедушке и спроси про их дела','Поддержи кого-нибудь тёплыми словами','Сделай доброе дело анонимно','Оставь добрую записку на холодильнике',
+'Спроси, как прошёл день у близкого, и выслушай','Помоги донести тяжёлые сумки','Уступи место в транспорте','Приготовь завтрак для всей семьи','Поблагодари кого-то за его работу',
+'Отправь смешную картинку, чтобы поднять настроение другу','Предложи зонтик кому-то в дождь','Скажи три искренних комплимента разным людям','Предложи присмотреть за питомцем соседей','Поздравь кого-нибудь даже с маленькой победой',
+'Поделись любимой вкусняшкой с кем-нибудь','Помоги кому-нибудь найти нужное место','Составь плейлист для друга','Скажи что-то приятное незнакомому человеку','Напиши человеку, с которым давно не общался',
+'Испеки печенье и угости соседей','Поблагодари учителя, врача или наставника','Отправь кому-то фото из общих воспоминаний','Спроси о мечте близкого и выслушай','Сделай что-то ради чужого комфорта',
+'Улыбнись пяти незнакомым людям','Подари кому-то свою любимую книгу','Предложи кому-то прогуляться вместе','Скажи себе вслух что-то доброе','Запиши голосовое с тёплыми словами',
+'Помоги кому-то сфотографироваться вместе','Угости кого-нибудь кофе или чаем','Напиши спасибо трём людям и отправь','Поддержи чью-то идею вслух','Спроси у близких, чем можешь помочь сегодня',
+'Подари кому-то тёплые носки или варежки','Поздравь кого-то с событием, о котором все забыли','Оставь добрый комментарий под чьим-то постом','Приготовь для кого-то еду','Помоги кому-то разобраться с задачей',
+'Подари кому-то букетик полевых цветов','Пригласи кого-то на прогулку или в гости','Скажи человеку, что тебя вдохновляет его дело','Угости кого-то маленькой сладостью','Выслушай кого-то, не перебивая',
+'Сделай оригами-фигурку из бумаги','Нарисуй открытку своими руками','Собери браслет из бусин','Сделай гирлянду из бумаги','Раскрась камешек красками',
+'Собери коллаж настроения из вырезок','Сделай бумажный самолётик и запусти его','Смастери закладку для книги','Укрась банку лентами или шпагатом','Сделай аппликацию из листьев или цветов',
+'Слепи фигурку из глины или пластилина','Сделай открытку из лоскутков ткани','Сплети фенечку из ниток','Собери мини-сад в банке','Нарисуй маленький рисунок акварелью',
+'Сделай кораблик из бумаги','Смастери брелок из бусин','Собери мудборд из вырезок','Сделай конверт для письма из бумаги','Укрась фоторамку пуговицами',
+'Нарисуй смешной узор на камешке','Сделай украшение из цветной бумаги','Собери мини-венок из веточек','Сложи журавлика из бумаги','Сделай свечу в баночке',
+'Нарисуй маленький рисунок в блокноте','Смастери мини-блокнот из обрезков','Сделай коллаж из старых журналов','Пришей пуговицу или сделай простую нашивку','Вырежи снежинку из бумаги',
+'Укрась кружку наклейками или маркерами','Сделай открытку с сухоцветом','Смастери маленькую птичку из бумаги','Сделай гирлянду из флажков','Нарисуй мини-комикс из четырёх кадров',
+'Сделай сердечко из бумажных полосок','Укрась карандаш цветным скотчем','Смастери коробочку из бумаги','Сделай магнит на холодильник из картона','Сложи тюльпан из бумаги',
+'Раскрась камешек под букашку','Сделай воздушного змея','Смастери гирлянду из фото на прищепках','Сделай открытку в технике отпечатка листа','Сплети косичку-шнурок из ткани',
+'Сделай рамку из палочек для мороженого','Нарисуй узор по трафарету','Смастери шляпу или корону из бумаги','Сделай панно из ниток и картона','Смастери бабочку из бумаги',
+'Укрась блокнот собственными каракулями','Сделай зверушку из носка','Смастери мини-флажок из бумаги','Слепи тарелочку из самозатвердевающей глины','Сделай гирлянду из бумажных кружков',
+'Нарисуй портрет близкого простыми линиями','Сделай конверт для сюрприза','Собери мини-план недели на бумаге','Сложи коробочку с крышкой из бумаги','Смастери сувенир из фетра или лоскутков',
+'Заправь кровать сразу после пробуждения','Разбери одну полку','Полей домашние растения','Протри пыль на рабочем столе','Сделай уютный уголок из подушек и пледа',
+'Помой посуду сразу после еды','Разбери один ящик с мелочами','Взбей подушки и поправь плед','Протри зеркало до блеска','Расставь книги на полке по цветам',
+'Постирай одну вещь вручную','Наведи порядок на кухонном столе','Аккуратно расставь обувь у входа','Протри листья домашних растений','Разбери тумбочку у кровати',
+'Проветри комнату 10 минут','Аккуратно сложи вещи в шкафу','Протри подоконники','Разбери одну сумку или рюкзак','Зажги свечу или повесь гирлянду для уюта',
+'Наведи порядок на рабочем месте','Отложи одну вещь, которую отдашь','Протри пол в одной комнате','Протри выключатели и дверные ручки','Разбери коробку с памятными вещами',
+'Разложи мелочи по красивым ёмкостям','Сделай любимый уголок ещё уютнее','Помой миски питомца','Повесь новую картину или открытку','Наведи порядок на полочке в ванной',
+'Протри входную дверь','Разбери бумаги и блокноты','Наведи порядок в кухонных полотенцах','Разбери аптечку','Протри телефон и клавиатуру',
+'Разбери один ящик с посудой','Сложи пледы и подушки красивой стопкой','Протри светильники и лампы','Наведи порядок у входного коврика','Переложи одну вещь на более подходящее место',
+'Наведи порядок в проводах и зарядках','Разбери специи на кухне','Освежи воздух: проветривание или ароматизатор','Разбери полку в ванной','Протри бытовую технику',
+'Разбери корзину для белья','Протри полку внутри одного шкафа','Собери лоток для ключей и мелочей','Протри дверцу холодильника','Красиво расправь шторы',
+'Наведи порядок в домашней аптечке косметики','Постирай одну декоративную наволочку','Протри плинтус в одной комнате','Обустрой уютный уголок для чтения','Собери средства для уборки в одно место',
+'Разбери угол на балконе или лоджии','Протирай стол после каждого приёма пищи','Разбери коробку с подарочными лентами','Аккуратно поставь тапочки у входа','Потрать 15 минут на одно маленькое дело по дому',
+'Выпей стакан воды сразу после пробуждения','Пройдись 15 минут на свежем воздухе','Сделай лёгкую растяжку утром','Ляг спать на полчаса раньше обычного','Сделай дыхательное упражнение на 5 минут',
+'Съешь один фрукт или овощ','Расправь плечи и выпрями спину прямо сейчас','Прими контрастный душ, если нет противопоказаний','Сделай гимнастику для глаз после экрана','Поднимись по лестнице вместо лифта',
+'Посиди 5 минут в тишине','Запиши три вещи, за которые благодарен','Пройдись 10 минут после еды','Сделай планку или 10 приседаний','Сделай перерыв без телефона на час',
+'Послушай спокойную музыку с закрытыми глазами','Запиши одну цель на завтра','Съешь приём пищи без телефона и экрана','Умойся прохладной водой утром','Проведи 10 минут на улице без телефона',
+'Запиши три вещи, которыми гордишься','Потанцуй под одну любимую песню','Сделай самомассаж плеч и шеи','Ляг спать до 23:00','Проведи вечер без соцсетей',
+'Выучи одну простую технику дыхания','Прими тёплый душ, думая о приятном','Позавтракай медленно, наслаждаясь вкусом','Улыбнись себе в зеркало','Погуляй в парке или зелёном дворе',
+'Сделай лёгкую зарядку под музыку','Запиши одну маленькую победу дня','Дай глазам отдых: посмотри вдаль','Пройди часть пути без наушников','Проследи за осанкой, пока сидишь',
+'Делай короткие паузы каждый час за работой','Прочитай 10 страниц книги вместо ленты','Напиши себе записку «Ты молодец»','Прими тёплую ванну с солью, если есть возможность','Сделай несколько глубоких вдохов у окна',
+'Замени один перекус на полезный','Выйди на улицу хотя бы на 5 минут','Сделай одно дело, которое откладывал','Скажи себе добрые слова вслух','Позаботься о руках: крем и массаж',
+'Выключи телефон за час до сна','Послушай звуки улицы или птиц','Постели свежие простыни','Посиди в короткой медитации в тишине','Пройдись медленным шагом, замечая детали',
+'Выпей травяной чай не спеша','Посиди 2 минуты без занятий и телефона','Сделай разминку на 5 минут прямо сейчас','Напиши письмо себе в будущее','Поешь за столом, а не на бегу',
+'Поблагодари своё тело за работу','Сделай паузу от экранов на 30 минут','Ляг сегодня в то же время, что и вчера','Сделай одно приятное только для себя','Запиши мысль, которая сегодня тебя порадовала',
+'Пройди по улице, по которой никогда не ходил','Сделай 5 красивых фото обычных вещей','Послушай песню жанра, который никогда не слушаешь','Скажи «да» небольшому неожиданному предложению','Приготовь новое блюдо из того, что есть дома',
+'Сфотографируй небо и сохрани в альбом','Узнай один интересный факт и расскажи кому-то','Попробуй новый маршрут до дома','Посмотри сегодня на закат или рассвет','Послушай 15 минут подкаст или аудиокнигу',
+'Придумай название для своей группы и запиши','Найди что-то новое в привычном окружении','Сделай фото одного дня своей жизни','Придумай добрую историю о случайном прохожем','Попробуй новый напиток: чай, какао или смузи',
+'Устрой мини-квест для кого-то дома','Найди дома предметы на каждую букву алфавита','Нарисуй карту своей комнаты как карту сокровищ','Послушай музыку года своего рождения','Сфотографируй красивую тень или отражение',
+'Выучи 3 слова на иностранном языке','Придумай маленькую традицию на неделю','Посмотри старые фото и выбери любимые','Составь список из 10 вещей, которые радуют','Погуляй в новом парке или дворе',
+'Найди облако, похожее на что-то','Поиграй с кем-то в настолку или карты','Напиши список из 5 больших и маленьких мечт','Попробуй рисовать левой рукой, если ты правша','Сделай мини-капсулу времени для себя будущего',
+'Найди укромное место в своём районе','Собери плейлист «Один день»','Придумай тайный знак для близкого человека','Понаблюдай 5 минут за дождём или снегом','Сфотографируй что-то жёлтое или любого цвета',
+'Выучи наизусть короткое стихотворение','Устрой мини-пикник даже дома','Найди три красивые двери или окна на улице','Запиши желание на следующий месяц','Погуляй медленно, как турист в своём городе',
+'Устрой домашний квест с записками','Придумай название для сегодняшнего дня','Сфотографируй самое красивое, что увидишь','Составь список из 10 мест, где хочешь побывать','Посмотри на звёзды 5 минут вечером',
+'Придумай собственную игру с простыми правилами','Пройди новым маршрутом до магазина','Собери маленький букетик из цветов или листьев','Придумай мини-сюрприз на завтра','Нарисуй мини-карту своего дня',
+'Найди красивое в самом обычном','Услышь и назови 5 разных звуков вокруг','Заведи баночку записок о хороших днях','Попробуй блюдо, которое никогда не пробовал','Сфотографируй собственную тень',
+'Придумай мини-девиз на неделю','Посмотри в окно 5 минут, как в кино','Найди предмет в форме сердца','Составь список из 5 вещей, которые никогда не пробовал','Заверши день одним хорошим воспоминанием'
+];
+
+function dateKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function seededIndex(seed,len){let h=2166136261>>>0;for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0)%len;}
+
+const taskEl=document.getElementById('task');
+const film=document.getElementById('film');
+const canvas=document.getElementById('filmCanvas');
+const ctx=canvas.getContext('2d');
+const progressEl=document.getElementById('progress');
+
+taskEl.textContent=TASKS[seededIndex(dateKey(),TASKS.length)];
+
+setupFilm();
+
+function setupFilm(){
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  const rect=film.getBoundingClientRect();
+  canvas.width=rect.width*dpr;
+  canvas.height=rect.height*dpr;
+  ctx.scale(dpr,dpr);
+  drawFilmBase(rect.width,rect.height);
+
+  let drawing=false;
+  let lastX=null,lastY=null;
+  let strokes=0;
+  let revealed=false;
+
+  const RADIUS=26;
+  // Порог полного стирания — 92%
+  const REVEAL_THRESHOLD=0.92;
+
+  function pos(e){
+    const r=film.getBoundingClientRect();
+    const t=e.touches?e.touches[0]:e;
+    return {x:t.clientX-r.left,y:t.clientY-r.top};
+  }
+  function erase(x,y){
+    ctx.globalCompositeOperation='destination-out';
+    ctx.beginPath();
+    if(lastX!==null){
+      ctx.lineWidth=RADIUS*2;
+      ctx.lineCap='round';
+      ctx.lineJoin='round';
+      ctx.moveTo(lastX,lastY);
+      ctx.lineTo(x,y);
+      ctx.stroke();
+    }else{
+      ctx.fillStyle='rgba(0,0,0,1)';
+      ctx.beginPath();
+      ctx.arc(x,y,RADIUS,0,Math.PI*2);
+      ctx.fill();
+    }
+    lastX=x;lastY=y;
+  }
+
+  function computePercent(){
+    const w=canvas.width,h=canvas.height;
+    const data=ctx.getImageData(0,0,w,h).data;
+    let transparent=0,total=0;
+    // шаг 32 пикселя — быстрее и достаточно точно
+    const step=32*4;
+    for(let i=3;i<data.length;i+=step){
+      total++;
+      if(data[i]===0) transparent++;
+    }
+    return total>0 ? transparent/total : 0;
+  }
+
+  function checkReveal(){
+    if(revealed)return;
+    const pct=computePercent();
+
+    // Показываем прогресс, если начали стирать, но ещё не открыто
+    if(pct>0.05 && pct<REVEAL_THRESHOLD){
+      progressEl.textContent=Math.round(pct*100)+'%';
+      progressEl.classList.add('show');
+      film.classList.add('partial');
+      film.classList.remove('hint');
+    }else if(pct<=0.05){
+      progressEl.classList.remove('show');
+      film.classList.add('hint');
+      film.classList.remove('partial');
+    }
+
+    if(pct>=REVEAL_THRESHOLD){
+      revealed=true;
+      progressEl.textContent='✓';
+      progressEl.classList.add('show');
+      film.classList.remove('hint','partial');
+      film.classList.add('revealing');
+      // Полностью скрываем плёнку через анимацию
+      setTimeout(()=>{
+        if(film.parentNode) film.remove();
+        progressEl.classList.remove('show');
+      },750);
+    }
+  }
+
+  function start(e){
+    e.preventDefault();
+    drawing=true;
+    film.classList.remove('hint');
+    const p=pos(e);lastX=p.x;lastY=p.y;
+    erase(p.x,p.y);
+  }
+  function move(e){
+    if(!drawing)return;
+    e.preventDefault();
+    const p=pos(e);
+    erase(p.x,p.y);
+    strokes++;
+    if(strokes%4===0) checkReveal();
+  }
+  function end(){
+    if(!drawing)return;
+    drawing=false;lastX=null;lastY=null;
+    checkReveal();
+  }
+
+  film.addEventListener('touchstart',start,{passive:false});
+  film.addEventListener('touchmove',move,{passive:false});
+  film.addEventListener('touchend',end);
+  film.addEventListener('mousedown',start);
+  window.addEventListener('mousemove',move);
+  window.addEventListener('mouseup',end);
+}
+
+function drawFilmBase(w,h){
+  const g=ctx.createLinearGradient(0,0,w,h);
+  g.addColorStop(0,'#d9d4c7');
+  g.addColorStop(0.35,'#efeae0');
+  g.addColorStop(0.55,'#c9c2b2');
+  g.addColorStop(0.8,'#e5dfd1');
+  g.addColorStop(1,'#b8b1a1');
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,w,h);
+
+  ctx.save();
+  ctx.globalAlpha=0.18;
+  for(let i=-h;i<w+h;i+=22){
+    ctx.strokeStyle='rgba(255,255,255,.6)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(i,0);
+    ctx.lineTo(i+h,h);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha=0.08;
+  ctx.strokeStyle='#000';
+  ctx.lineWidth=0.5;
+  for(let y=0;y<h;y+=4){
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(w,y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  const shine=ctx.createLinearGradient(0,0,0,h);
+  shine.addColorStop(0,'rgba(255,255,255,.35)');
+  shine.addColorStop(0.25,'rgba(255,255,255,0)');
+  shine.addColorStop(0.75,'rgba(0,0,0,0)');
+  shine.addColorStop(1,'rgba(0,0,0,.12)');
+  ctx.fillStyle=shine;
+  ctx.fillRect(0,0,w,h);
+}
+
+let resizeTimer;
+window.addEventListener('resize',()=>{
+  if(film.parentNode && !film.classList.contains('revealing')){
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{
+      const dpr=Math.max(1,window.devicePixelRatio||1);
+      const rect=film.getBoundingClientRect();
+      canvas.width=rect.width*dpr;
+      canvas.height=rect.height*dpr;
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.scale(dpr,dpr);
+      drawFilmBase(rect.width,rect.height);
+    },200);
+  }
+});
+</script>
+</body>
+</html>
