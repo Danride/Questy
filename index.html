@@ -131,7 +131,6 @@ body::before{
   pointer-events:none;
 }
 
-/* Индикатор прогресса стирания */
 .progress{
   position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);
   font-size:9px;letter-spacing:.15em;text-transform:uppercase;
@@ -216,7 +215,65 @@ body::before{
 
 </div>
 
+<!-- VK Bridge -->
+<script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+
 <script>
+/* ================== VK BRIDGE ================== */
+const vkBridge = window.vkBridge;
+
+function initVKBridge(){
+  if(!vkBridge){
+    console.warn('[VK Bridge] не загружен — работаем в обычном режиме');
+    return;
+  }
+
+  try{
+    // Инициализация мини-приложения
+    vkBridge.send('VKWebAppInit');
+
+    // Настройка цветов шапки и статус-бара
+    vkBridge.send('VKWebAppSetViewSettings',{
+      status_bar_style:'light',          // светлый текст в статус-баре
+      action_bar_text_color:'#f5efe2',   // цвет текста в action bar
+      status_bar_background_color:'#0f0f12',
+      action_bar_background_color:'#0f0f12',
+      navigation_bar_color:'#0f0f12'
+    }).catch(()=>{});
+
+    // Отключаем свайп назад (чтобы не закрывалось приложение случайно)
+    vkBridge.send('VKWebAppEnableSwipeBack').catch(()=>{});
+
+    // Слушаем смену темы от VK — если пользователь поменяет тему,
+    // можно адаптироваться (пока оставляем свою тему)
+    vkBridge.subscribe((e)=>{
+      if(!e || !e.detail) return;
+      if(e.detail.type==='VKWebAppUpdateConfig'){
+        const cfg=e.detail.data||{};
+        // appearance: 'light' | 'dark'
+        // scheme: 'bright_light' | 'client_light' | 'space_gray' | 'vkcom_light' и т.д.
+        const scheme=cfg.appearance||cfg.scheme||'';
+        const isDark=/dark|gray|space/i.test(scheme);
+        // При желании можно менять тему здесь:
+        // document.documentElement.style.setProperty('--bg', isDark?'#0f0f12':'#f5efe2');
+        // document.documentElement.style.setProperty('--ink', isDark?'#f5efe2':'#0f0f12');
+      }
+    });
+
+    console.log('[VK Bridge] инициализирован');
+  }catch(err){
+    console.warn('[VK Bridge] ошибка инициализации:',err);
+  }
+}
+
+// Запускаем, когда DOM готов
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',initVKBridge);
+}else{
+  initVKBridge();
+}
+
+/* ================== ДАННЫЕ ================== */
 const TASKS=[
 'Купи в магазине свежий хлеб','Закупи молоко и сыр','Купи связку бананов','Выбери сезонные фрукты','Купи небольшой букет цветов',
 'Купи свечу для уюта','Выбери чай с новым вкусом','Сходи на рынок за овощами','Купи баночку мёда','Возьми любимый сок',
@@ -292,6 +349,7 @@ const TASKS=[
 'Придумай мини-девиз на неделю','Посмотри в окно 5 минут, как в кино','Найди предмет в форме сердца','Составь список из 5 вещей, которые никогда не пробовал','Заверши день одним хорошим воспоминанием'
 ];
 
+/* ================== ЛОГИКА ================== */
 function dateKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function seededIndex(seed,len){let h=2166136261>>>0;for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0)%len;}
 
@@ -319,7 +377,6 @@ function setupFilm(){
   let revealed=false;
 
   const RADIUS=26;
-  // Порог полного стирания — 92%
   const REVEAL_THRESHOLD=0.92;
 
   function pos(e){
@@ -350,7 +407,6 @@ function setupFilm(){
     const w=canvas.width,h=canvas.height;
     const data=ctx.getImageData(0,0,w,h).data;
     let transparent=0,total=0;
-    // шаг 32 пикселя — быстрее и достаточно точно
     const step=32*4;
     for(let i=3;i<data.length;i+=step){
       total++;
@@ -363,7 +419,6 @@ function setupFilm(){
     if(revealed)return;
     const pct=computePercent();
 
-    // Показываем прогресс, если начали стирать, но ещё не открыто
     if(pct>0.05 && pct<REVEAL_THRESHOLD){
       progressEl.textContent=Math.round(pct*100)+'%';
       progressEl.classList.add('show');
@@ -381,7 +436,14 @@ function setupFilm(){
       progressEl.classList.add('show');
       film.classList.remove('hint','partial');
       film.classList.add('revealing');
-      // Полностью скрываем плёнку через анимацию
+
+      // Вибрация через VK Bridge (если поддерживается)
+      if(vkBridge){
+        vkBridge.send('VKWebAppTapticImpactOccurred',{style:'medium'}).catch(()=>{});
+      }else if(navigator.vibrate){
+        navigator.vibrate(20);
+      }
+
       setTimeout(()=>{
         if(film.parentNode) film.remove();
         progressEl.classList.remove('show');
