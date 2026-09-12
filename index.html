@@ -33,7 +33,6 @@ body::before{
              radial-gradient(45% 40% at 20% 85%,rgba(155,92,246,.06),transparent 70%);
 }
 
-/* ===== ФОНОВЫЕ СИМВОЛЫ ===== */
 .bg-symbols{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
 .bg-sym{
   position:absolute;pointer-events:auto;cursor:pointer;
@@ -136,7 +135,6 @@ body::before{
 .tab.locked .co::before{background:var(--line)}
 .tab:active{background:rgba(255,205,150,.14)}
 
-/* ===== БЛОК ЗАДАНИЯ + КНОПКА REROLL ===== */
 .task-row{
   display:flex;align-items:stretch;gap:8px;
   width:100%;
@@ -158,7 +156,6 @@ body::before{
   letter-spacing:-.005em;color:var(--ink);
 }
 
-/* Кнопка «Другое задание» */
 .reroll-btn{
   position:relative;
   width:44px;min-height:44px;
@@ -168,7 +165,7 @@ body::before{
   cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:'Unbounded',sans-serif;
-  transition:border-color .25s,background .25s,transform .3s;
+  transition:border-color .25s,background .25s,transform .3s, opacity .3s;
   padding:4px;
   flex-shrink:0;
 }
@@ -181,6 +178,7 @@ body::before{
 .reroll-btn:active .ico{transform:rotate(360deg)}
 .reroll-btn.loading{pointer-events:none;opacity:.6}
 .reroll-btn.loading .ico{animation:spin 1s linear infinite}
+.reroll-btn.disabled{pointer-events:none;opacity:0.4;cursor:not-allowed}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .film{
@@ -210,7 +208,6 @@ body::before{
 }
 .progress.show{opacity:1}
 
-/* ===== КНОПКИ ДЕЙСТВИЙ ===== */
 .actions{
   display:flex;gap:6px;width:100%;
   opacity:0;animation:fadeIn 1s ease .55s forwards;
@@ -243,7 +240,6 @@ body::before{
 .footer .mini.l{left:-1.25px;top:50%;transform:translate(-50%,-50%) rotate(45deg)}
 .footer .mini.r{right:-1.25px;top:50%;transform:translate(50%,-50%) rotate(45deg)}
 
-/* ===== МОДАЛКА «ОТПРАВИТЬ ДРУГУ» ===== */
 .modal-backdrop{
   position:fixed;inset:0;z-index:100;
   background:rgba(10,10,12,.85);
@@ -377,7 +373,6 @@ body::before{
     </button>
   </div>
 
-  <!-- ЗАДАНИЕ + КНОПКА REROLL -->
   <div class="task-row">
     <div class="task-wrap" id="taskWrap">
       <span class="c tl"></span>
@@ -389,11 +384,10 @@ body::before{
     </div>
     <button class="reroll-btn" id="rerollBtn" title="Другое задание">
       <span class="ico">↻</span>
-      <span class="lbl">Другое</span>
+      <span class="lbl" id="rerollLbl">3/3</span>
     </button>
   </div>
 
-  <!-- ДВЕ КНОПКИ ДЕЙСТВИЙ -->
   <div class="actions">
     <button class="full-access" id="fullAccessBtn">
       <span>Полный доступ</span><span class="price">99₽</span>
@@ -411,7 +405,6 @@ body::before{
 
 </div>
 
-<!-- МОДАЛКА «ОТПРАВИТЬ ДРУГУ» -->
 <div class="modal-backdrop" id="shareModal">
   <div class="modal">
     <button class="modal-close" id="modalClose">✕</button>
@@ -429,10 +422,7 @@ body::before{
     </div>
 
     <div class="modal-actions">
-      <button class="modal-btn" id="shareVkBtn">
-        <span class="ico">✦</span><span>ВКонтакте</span>
-      </button>
-      <button class="modal-btn secondary" id="shareSaveBtn">
+      <button class="modal-btn" id="shareSaveBtn">
         <span class="ico">↓</span><span>Сохранить</span>
       </button>
     </div>
@@ -442,17 +432,11 @@ body::before{
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 
 <script>
-/* ============================================================
-   НАСТРОЙКИ — ЗАМЕНИ НА СВОИ ДАННЫЕ
-   ============================================================ */
-const APP_URL = 'https://vk.ru/app54747359'; //
+const APP_URL = 'https://vk.ru/app54747359';
 const APP_NAME = '360';
-const REROLL_PRICE = 0; // 0 = только за рекламу. Или число (например, 5) для оплаты через VK Pay
-const MAX_REROLLS_PER_DAY = 3; // Максимум смен задания за рекламу в сутки
+const REROLL_PRICE = 0;
+const MAX_REROLLS_PER_DAY = 3;
 
-/* ============================================================
-   ФОНОВЫЕ СИМВОЛЫ
-   ============================================================ */
 (function initBgSymbols(){
   const container=document.getElementById('bgSymbols');
   const glyphs=['✦','✧','!','!','!','★','✶','!','·','✴','!','!'];
@@ -518,9 +502,6 @@ const MAX_REROLLS_PER_DAY = 3; // Максимум смен задания за 
   for(let i=0;i<COUNT;i++) spawnSymbol();
 })();
 
-/* ============================================================
-   VK BRIDGE
-   ============================================================ */
 const vkBridge = window.vkBridge;
 
 function initVKBridge(){
@@ -540,9 +521,6 @@ function initVKBridge(){
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initVKBridge);
 else initVKBridge();
 
-/* ============================================================
-   ДАННЫЕ
-   ============================================================ */
 const TASKS_NORMAL=[
 'Покорми голубя','Сегодня ходи во всем белом','Предложи незнакомому человеку в соц.сети тортика','Картавь весь день','Купи шоколадку и подари любому человку',
 'Обнови аватар в соц. сети на капибару ','Посети зоомогазин','Выучи пару фраз на языке жестов','Одень разные носки','Напиши спасибо трем людям за то, что они существуют',
@@ -564,9 +542,6 @@ const TASKS_ADULT=[
 ];
 const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD, adult:TASKS_ADULT};
 
-/* ============================================================
-   ХРАНИЛИЩЕ
-   ============================================================ */
 function vkStorageSet(key,value){
   try{ localStorage.setItem('g_'+key,value); }catch(e){}
   if(vkBridge) return vkBridge.send('VKWebAppStorageSet',{key,value}).catch(()=>{});
@@ -589,9 +564,6 @@ function vkStorageGet(keys){
   return Promise.resolve(fallback());
 }
 
-/* ============================================================
-   ЛОГИКА ЗАДАНИЙ + REROLL
-   ============================================================ */
 function dateKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function seededIndex(seed,len){let h=2166136261>>>0;for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0)%len;}
 
@@ -601,10 +573,10 @@ const progressEl=document.getElementById('progress');
 const tabsEl=document.getElementById('tabs');
 const fullAccessBtn=document.getElementById('fullAccessBtn');
 const rerollBtn=document.getElementById('rerollBtn');
+const rerollLbl=document.getElementById('rerollLbl');
 const shareBtn=document.getElementById('shareBtn');
 const shareModal=document.getElementById('shareModal');
 const modalClose=document.getElementById('modalClose');
-const shareVkBtn=document.getElementById('shareVkBtn');
 const shareSaveBtn=document.getElementById('shareSaveBtn');
 const shareCanvas=document.getElementById('shareCanvas');
 
@@ -613,15 +585,12 @@ let unlocked={hard:false, adult:false};
 let fullAccess=false;
 let filmEl=null;
 
-// Для Reroll: храним текущий seed и уже выпавшие индексы за сегодня
 let currentSeed='';
 let currentTaskIndex=-1;
 const usedToday={normal:new Set(), hard:new Set(), adult:new Set()};
 
-// Счётчик смен задания за сегодня (через рекламу)
 let rerollsToday = 0;
 
-// Загружаем использованные задания из хранилища при старте
 function loadUsedToday(){
   try{
     const raw=localStorage.getItem('used_'+dateKey());
@@ -644,7 +613,6 @@ function saveUsedToday(){
   }catch(e){}
 }
 
-// Загрузка и сохранение счётчика reroll
 function loadRerollsToday(){
   try{
     const raw=localStorage.getItem('rerolls_'+dateKey());
@@ -660,35 +628,41 @@ function saveRerollsToday(){
   }catch(e){}
 }
 
+function updateRerollUI(){
+  const remaining = Math.max(0, MAX_REROLLS_PER_DAY - rerollsToday);
+  if(rerollLbl) rerollLbl.textContent = `${remaining}/${MAX_REROLLS_PER_DAY}`;
+  
+  if(remaining <= 0){
+    rerollBtn.classList.add('disabled');
+  }else{
+    rerollBtn.classList.remove('disabled');
+  }
+}
+
 function pickTaskIndex(cat, excludeIndex=-1){
   const list=CATEGORY_TASKS[cat];
   const used=usedToday[cat];
 
-  // Если все задания уже были использованы — сбрасываем (кроме текущего)
   if(used.size >= list.length){
     used.clear();
     if(excludeIndex>=0) used.add(excludeIndex);
   }
 
-  // Собираем доступные индексы
   const available=[];
   for(let i=0;i<list.length;i++){
     if(i!==excludeIndex && !used.has(i)) available.push(i);
   }
   if(available.length===0){
-    // fallback: любой индекс кроме текущего
     for(let i=0;i<list.length;i++){
       if(i!==excludeIndex) available.push(i);
     }
   }
-  // Случайный выбор
   const idx=available[Math.floor(Math.random()*available.length)];
   used.add(idx);
   saveUsedToday();
   return idx;
 }
 
-/* ---- ПЛЁНКА ---- */
 function buildFilm(){
   if(filmEl && filmEl.parentNode) filmEl.remove();
   const div=document.createElement('div');
@@ -819,7 +793,6 @@ function initFilmInteraction(film, canvas){
   });
 }
 
-/* ---- ПЕРЕКЛЮЧЕНИЕ КАТЕГОРИИ ---- */
 function switchCategory(cat, forceNew=false){
   currentCategory=cat;
   [...tabsEl.querySelectorAll('.tab')].forEach(btn=>{
@@ -828,14 +801,10 @@ function switchCategory(cat, forceNew=false){
   const list=CATEGORY_TASKS[cat];
 
   if(forceNew){
-    // Reroll: выбираем новое задание, исключая текущее
     currentTaskIndex = pickTaskIndex(cat, currentTaskIndex);
     currentSeed = dateKey()+':'+cat+':'+currentTaskIndex+':'+Math.random();
   }else if(currentSeed && currentSeed.startsWith(dateKey()+':'+cat)){
-    // Та же категория — оставляем текущее задание
-    // (но индекс уже должен быть установлен)
   }else{
-    // Первая загрузка категории за сегодня — детерминированный выбор по дате
     currentTaskIndex = seededIndex(dateKey()+':'+cat, list.length);
     currentSeed = dateKey()+':'+cat;
     usedToday[cat].add(currentTaskIndex);
@@ -859,19 +828,10 @@ function updateLocks(){
   }
 }
 
-/* ============================================================
-   REROLL — «ДРУГОЕ ЗАДАНИЕ»
-   ============================================================ */
 function doReroll(){
-  if(rerollBtn.classList.contains('loading')) return;
+  if(rerollBtn.classList.contains('loading') || rerollBtn.classList.contains('disabled')) return;
+  if(rerollsToday >= MAX_REROLLS_PER_DAY) return;
 
-  // Проверка лимита смен задания за сегодня
-  if(rerollsToday >= MAX_REROLLS_PER_DAY){
-    alert('Достигнут лимит смен задания на сегодня (' + MAX_REROLLS_PER_DAY + ' раза). Попробуй завтра!');
-    return;
-  }
-
-  // Если категория закрыта — сначала открываем её
   if(currentCategory!=='normal' && !fullAccess && !unlocked[currentCategory]){
     requestUnlock(currentCategory);
     return;
@@ -880,10 +840,11 @@ function doReroll(){
   rerollBtn.classList.add('loading');
 
   const grant=()=>{
-    // Успех: меняем задание
+    // Меняем задание в ТЕКУЩЕЙ категории
     switchCategory(currentCategory, true);
     rerollsToday++;
     saveRerollsToday();
+    updateRerollUI();
     setTimeout(()=>rerollBtn.classList.remove('loading'), 500);
     if(vkBridge) vkBridge.send('VKWebAppTapticImpactOccurred',{style:'light'}).catch(()=>{});
     else if(navigator.vibrate) navigator.vibrate(10);
@@ -894,23 +855,36 @@ function doReroll(){
   };
 
   if(vkBridge){
-    // Сначала проверяем наличие рекламы
     vkBridge.send('VKWebAppCheckNativeAds',{ad_format:'reward'})
       .then(r=>{
         if(!r || !r.result){
-          alert('Реклама сейчас недоступна, попробуй позже');
           fail();
           return Promise.reject();
         }
-        return vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'});
+        
+        const adPromise = vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'})
+          .then(res=>{
+            if(res && res.result) return 'success';
+            return 'closed';
+          })
+          .catch(()=> 'error');
+        
+        // Если прошло 5 секунд, считаем просмотр успешным
+        const timerPromise = new Promise(resolve => {
+          setTimeout(()=> resolve('timeout'), 5000);
+        });
+        
+        return Promise.race([adPromise, timerPromise]);
       })
-      .then(res=>{
-        if(res && res.result) grant();
-        else fail();
+      .then(result=>{
+        if(result === 'success' || result === 'timeout') {
+          grant();
+        } else {
+          fail();
+        }
       })
       .catch(()=>fail());
   }else{
-    // Эмуляция вне VK
     if(confirm('Показать рекламу (эмуляция) и получить другое задание?')) grant();
     else fail();
   }
@@ -918,9 +892,6 @@ function doReroll(){
 
 rerollBtn.addEventListener('click', doReroll);
 
-/* ============================================================
-   ПОКУПКА / РЕКЛАМА ДЛЯ КАТЕГОРИЙ
-   ============================================================ */
 function requestUnlock(cat){
   const grant=()=>{
     unlocked[cat]=true;
@@ -932,7 +903,6 @@ function requestUnlock(cat){
     vkBridge.send('VKWebAppCheckNativeAds',{ad_format:'reward'})
       .then(r=>{
         if(!r || !r.result){
-          alert('Реклама сейчас недоступна, попробуй позже');
           return Promise.reject();
         }
         return vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'});
@@ -973,49 +943,35 @@ tabsEl.addEventListener('click',(e)=>{
 });
 fullAccessBtn.addEventListener('click', requestFullAccess);
 
-/* ============================================================
-   «ОТПРАВИТЬ ДРУГУ» — МОДАЛКА С КАРТОЧКОЙ
-   ============================================================ */
-
-/* Рендер красивой карточки на canvas */
 function renderShareCard(){
   const cv=shareCanvas;
   const ctx=cv.getContext('2d');
   const W=cv.width, H=cv.height;
 
-  // Фон
   const bg=ctx.createLinearGradient(0,0,W,H);
   bg.addColorStop(0,'#0f0f12');
   bg.addColorStop(1,'#1a1820');
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
 
-  // Радиальное свечение
   const glow=ctx.createRadialGradient(W/2,H*0.35,0,W/2,H*0.35,W*0.7);
   glow.addColorStop(0,'rgba(255,180,120,.12)');
   glow.addColorStop(1,'rgba(255,180,120,0)');
   ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
 
-  // Рамка
   ctx.strokeStyle='rgba(245,239,226,.28)';
   ctx.lineWidth=2;
   ctx.strokeRect(30,30,W-60,H-60);
   ctx.strokeStyle='rgba(245,239,226,.14)';
   ctx.strokeRect(42,42,W-84,H-84);
 
-  // Угловые акценты
   const accent='rgba(255,205,150,.75)';
   ctx.strokeStyle=accent;ctx.lineWidth=2;
   const cs=22;
-  // TL
   ctx.beginPath();ctx.moveTo(30,30+cs);ctx.lineTo(30,30);ctx.lineTo(30+cs,30);ctx.stroke();
-  // TR
   ctx.beginPath();ctx.moveTo(W-30-cs,30);ctx.lineTo(W-30,30);ctx.lineTo(W-30,30+cs);ctx.stroke();
-  // BL
   ctx.beginPath();ctx.moveTo(30,H-30-cs);ctx.lineTo(30,H-30);ctx.lineTo(30+cs,H-30);ctx.stroke();
-  // BR
   ctx.beginPath();ctx.moveTo(W-30-cs,H-30);ctx.lineTo(W-30,H-30);ctx.lineTo(W-30,H-30-cs);ctx.stroke();
 
-  // Логотип-звезда
   const cx=W/2, cy=180;
   const starGrad=ctx.createLinearGradient(cx-80,cy-80,cx+80,cy+80);
   starGrad.addColorStop(0,'#fff4dd');
@@ -1024,7 +980,6 @@ function renderShareCard(){
   ctx.fillStyle=starGrad;
   ctx.shadowColor='rgba(255,200,140,.5)';
   ctx.shadowBlur=30;
-  // Рисуем 4-лучевую звезду через кривые
   ctx.beginPath();
   const R=70, r=8;
   ctx.moveTo(cx, cy-R);
@@ -1036,7 +991,6 @@ function renderShareCard(){
   ctx.fill();
   ctx.shadowBlur=0;
 
-  // Внутренняя звезда (белая)
   ctx.fillStyle='rgba(255,255,255,.9)';
   ctx.beginPath();
   const R2=14, r2=1.5;
@@ -1048,7 +1002,6 @@ function renderShareCard(){
   ctx.closePath();
   ctx.fill();
 
-  // Заголовок
   ctx.fillStyle='rgba(245,239,226,.75)';
   ctx.font='700 22px Unbounded, sans-serif';
   ctx.textAlign='center';
@@ -1056,18 +1009,15 @@ function renderShareCard(){
   ctx.letterSpacing='8px';
   ctx.fillText('ВЫЗОВ   ПРИНЯТ?', W/2, 310);
 
-  // Разделитель
   ctx.strokeStyle='rgba(245,239,226,.28)';
   ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(W/2-80,350);ctx.lineTo(W/2-10,350);ctx.stroke();
   ctx.beginPath();ctx.moveTo(W/2+10,350);ctx.lineTo(W/2+80,350);ctx.stroke();
-  // Ромб
   ctx.fillStyle=accent;
   ctx.beginPath();
   ctx.moveTo(W/2,346);ctx.lineTo(W/2+4,350);ctx.lineTo(W/2,354);ctx.lineTo(W/2-4,350);
   ctx.closePath();ctx.fill();
 
-  // Текст задания (с переносом строк)
   const taskText = taskEl.textContent || 'Задание дня';
   ctx.fillStyle='#f5efe2';
   ctx.font='400 34px Unbounded, sans-serif';
@@ -1075,19 +1025,16 @@ function renderShareCard(){
   ctx.textBaseline='top';
   wrapText(ctx, taskText, W/2, 400, W-140, 48);
 
-  // Категория (метка)
   const catLabels={normal:'ОБЫЧНОЕ', hard:'СЛОЖНОЕ', adult:'ПАРЫ 18+'};
   ctx.fillStyle=accent;
   ctx.font='700 16px Unbounded, sans-serif';
   ctx.textAlign='center';
   ctx.fillText(catLabels[currentCategory] || 'ЗАДАНИЕ', W/2, H-180);
 
-  // Название приложения
   ctx.fillStyle='rgba(245,239,226,.5)';
   ctx.font='400 14px Unbounded, sans-serif';
   ctx.fillText(APP_NAME + ' — ежедневные задания', W/2, H-130);
 
-  // Ссылка
   ctx.fillStyle='rgba(245,239,226,.35)';
   ctx.font='400 12px Unbounded, sans-serif';
   ctx.fillText(APP_URL.replace('https://',''), W/2, H-100);
@@ -1111,7 +1058,6 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight){
   ctx.fillText(line.trim(), x, curY);
 }
 
-/* Открытие модалки */
 function openShareModal(){
   renderShareCard();
   shareModal.classList.add('show');
@@ -1126,35 +1072,6 @@ shareModal.addEventListener('click',(e)=>{
   if(e.target===shareModal) closeShareModal();
 });
 
-/* Поделиться ВКонтакте */
-shareVkBtn.addEventListener('click',()=>{
-  const taskText = taskEl.textContent || '';
-  const catLabels={normal:'обычное', hard:'сложное', adult:'для пар 18+'};
-  const message = `Мне выпало ${catLabels[currentCategory]} задание:\n\n«${taskText}»\n\nА ты сможешь? ✦`;
-
-  if(vkBridge){
-    // Вариант 1: пост на стену с ссылкой на приложение
-    vkBridge.send('VKWebAppShowWallPostBox',{
-      message: message,
-      attachments: APP_URL
-    }).then(()=>{
-      closeShareModal();
-    }).catch(err=>{
-      console.warn('[Share]',err);
-      // Fallback: просто share ссылки
-      vkBridge.send('VKWebAppShare',{link:APP_URL})
-        .then(()=>closeShareModal())
-        .catch(()=>{});
-    });
-  }else{
-    // Эмуляция вне VK
-    if(confirm('Поделиться (эмуляция):\n\n'+message+'\n\n'+APP_URL)){
-      closeShareModal();
-    }
-  }
-});
-
-/* Сохранить картинку */
 shareSaveBtn.addEventListener('click',()=>{
   try{
     const dataUrl = shareCanvas.toDataURL('image/png');
@@ -1175,11 +1092,9 @@ shareSaveBtn.addEventListener('click',()=>{
   }
 });
 
-/* ============================================================
-   СТАРТ
-   ============================================================ */
 loadUsedToday();
-loadRerollsToday(); // Загружаем счётчик смен задания
+loadRerollsToday();
+updateRerollUI();
 switchCategory('normal');
 
 vkStorageGet(['unlock_hard_'+dateKey(),'unlock_adult_'+dateKey(),'full_access_purchase_date'])
