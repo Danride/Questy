@@ -14,6 +14,7 @@
   --line:rgba(245,239,226,.28);
   --line-soft:rgba(245,239,226,.14);
   --accent:rgba(255,205,150,.55);
+  --accent-soft:rgba(255,205,150,.25);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
 html,body{height:100%;overflow:hidden}
@@ -32,22 +33,55 @@ body::before{
              radial-gradient(45% 40% at 20% 85%,rgba(155,92,246,.06),transparent 70%);
 }
 
-.frame-outer{position:absolute;inset:6px;border:1px solid var(--line-soft);pointer-events:none}
+/* ===== ФОНОВЫЕ СИМВОЛЫ ===== */
+.bg-symbols{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.bg-sym{
+  position:absolute;pointer-events:auto;cursor:pointer;
+  color:var(--accent);font-family:'Unbounded',sans-serif;font-weight:700;
+  opacity:0;
+  animation:symFadeIn 1.2s ease forwards, symDrift var(--drift-dur,12s) linear var(--drift-delay,0s) infinite;
+  transition:transform .25s ease, opacity .25s ease;
+  text-shadow:0 0 8px rgba(255,200,140,.35);
+  will-change:transform;
+}
+.bg-sym:hover{transform:scale(1.25);color:#ffd29a}
+.bg-sym:active{transform:scale(.85)}
+@keyframes symFadeIn{from{opacity:0;filter:blur(4px)}to{opacity:var(--sym-opacity,.35);filter:blur(0)}}
+@keyframes symDrift{
+  0%{transform:translate(0,0) rotate(var(--sym-rot,0deg))}
+  25%{transform:translate(var(--dx1,30px),var(--dy1,-40px)) rotate(calc(var(--sym-rot,0deg) + 15deg))}
+  50%{transform:translate(var(--dx2,-20px),var(--dy2,-80px)) rotate(calc(var(--sym-rot,0deg) - 10deg))}
+  75%{transform:translate(var(--dx3,-50px),var(--dy3,-30px)) rotate(calc(var(--sym-rot,0deg) + 8deg))}
+  100%{transform:translate(0,0) rotate(var(--sym-rot,0deg))}
+}
+.burst{
+  position:absolute;pointer-events:none;
+  font-family:'Unbounded',sans-serif;font-weight:700;
+  color:var(--accent);text-shadow:0 0 6px rgba(255,200,140,.6);
+  animation:burstFly .9s cubic-bezier(.2,.7,.3,1) forwards;
+  will-change:transform,opacity;
+}
+@keyframes burstFly{
+  0%{transform:translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1);opacity:1}
+  100%{transform:translate(-50%,-50%) translate(var(--bx),var(--by)) rotate(var(--br)) scale(.3);opacity:0}
+}
+
+.frame-outer{position:absolute;inset:6px;border:1px solid var(--line-soft);pointer-events:none;z-index:3}
 .frame-outer::before,.frame-outer::after{
   content:"";position:absolute;left:50%;transform:translateX(-50%);
   width:18px;height:1px;background:var(--line-soft);
 }
 .frame-outer::before{top:-1px}
 .frame-outer::after{bottom:-1px}
-.frame-inner{position:absolute;inset:10px;border:1px solid var(--line-soft);pointer-events:none}
+.frame-inner{position:absolute;inset:10px;border:1px solid var(--line-soft);pointer-events:none;z-index:3}
 
-.corner{position:absolute;width:9px;height:9px;border:1px solid var(--accent);pointer-events:none}
+.corner{position:absolute;width:9px;height:9px;border:1px solid var(--accent);pointer-events:none;z-index:3}
 .corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
 .corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
 .corner.bl{bottom:6px;left:6px;border-right:none;border-top:none}
 .corner.br{bottom:6px;right:6px;border-left:none;border-top:none}
 
-.dot{position:absolute;width:2px;height:2px;border-radius:50%;background:var(--accent);pointer-events:none}
+.dot{position:absolute;width:2px;height:2px;border-radius:50%;background:var(--accent);pointer-events:none;z-index:3}
 .dot.tl{top:6px;left:6px;transform:translate(-50%,-50%)}
 .dot.tr{top:6px;right:6px;transform:translate(50%,-50%)}
 .dot.bl{bottom:6px;left:6px;transform:translate(-50%,50%)}
@@ -56,7 +90,7 @@ body::before{
 .content{
   position:relative;z-index:2;
   display:flex;flex-direction:column;align-items:center;
-  gap:clamp(14px,3vh,22px);
+  gap:clamp(12px,2.5vh,18px);
   max-width:380px;width:100%;
 }
 
@@ -74,15 +108,45 @@ body::before{
 .divider .line{flex:1;height:1px;background:var(--line)}
 .divider .diamond{width:4px;height:4px;transform:rotate(45deg);border:1px solid var(--accent)}
 
-.task-wrap{
-  position:relative;
-  padding:clamp(18px,4.5vw,26px) clamp(16px,4vw,24px);
+.tabs{display:flex;gap:6px;width:100%;opacity:0;animation:fadeIn 1s ease .35s forwards}
+.tab{
+  flex:1;position:relative;background:transparent;
+  border:1px solid var(--line);color:var(--ink);
+  font-family:'Unbounded',sans-serif;
+  font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  padding:10px 4px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:border-color .25s,background .25s,opacity .25s,color .25s;
+}
+.tab .co{position:absolute;width:6px;height:6px;border:1px solid var(--accent);pointer-events:none;opacity:.9}
+.tab .co.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.tab .co.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
+.tab .co.bl{bottom:-1px;left:-1px;border-right:none;border-top:none}
+.tab .co.br{bottom:-1px;right:-1px;border-left:none;border-top:none}
+.tab .co::before{content:"";position:absolute;width:2px;height:2px;background:var(--accent)}
+.tab .co.tl::before{top:-1px;right:-1px;transform:translate(50%,-50%)}
+.tab .co.tr::before{top:-1px;left:-1px;transform:translate(-50%,-50%)}
+.tab .co.bl::before{bottom:-1px;right:-1px;transform:translate(50%,50%)}
+.tab .co.br::before{bottom:-1px;left:-1px;transform:translate(-50%,50%)}
+
+.tab.active{border-color:var(--accent);background:rgba(255,205,150,.08)}
+.tab.active .co{border-color:var(--accent)}
+.tab.locked{opacity:.5}
+.tab.locked .co{border-color:var(--line);opacity:.6}
+.tab.locked .co::before{background:var(--line)}
+.tab:active{background:rgba(255,205,150,.14)}
+
+/* ===== БЛОК ЗАДАНИЯ + КНОПКА REROLL ===== */
+.task-row{
+  display:flex;align-items:stretch;gap:8px;
   width:100%;
   opacity:0;animation:fadeUp 1s cubic-bezier(.2,1,.3,1) .4s forwards;
 }
-.task-wrap::before{
-  content:"";position:absolute;inset:0;border:1px solid var(--line);
+.task-wrap{
+  position:relative;flex:1;
+  padding:clamp(18px,4.5vw,26px) clamp(16px,4vw,24px);
 }
+.task-wrap::before{content:"";position:absolute;inset:0;border:1px solid var(--line)}
 .task-wrap .c{position:absolute;width:7px;height:7px;border:1px solid var(--accent)}
 .task-wrap .c.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
 .task-wrap .c.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
@@ -91,59 +155,85 @@ body::before{
 
 .task{
   font-weight:400;font-size:clamp(16px,4.4vw,22px);line-height:1.5;
-  letter-spacing:-.005em;
-  color:var(--ink);
+  letter-spacing:-.005em;color:var(--ink);
 }
 
+/* Кнопка «Другое задание» */
+.reroll-btn{
+  position:relative;
+  width:44px;min-height:44px;
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--ink);
+  cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-family:'Unbounded',sans-serif;
+  transition:border-color .25s,background .25s,transform .3s;
+  padding:4px;
+  flex-shrink:0;
+}
+.reroll-btn .ico{font-size:16px;line-height:1;transition:transform .5s cubic-bezier(.2,1,.3,1)}
+.reroll-btn .lbl{
+  font-size:7px;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(245,239,226,.6);
+}
+.reroll-btn:active{background:rgba(255,205,150,.14)}
+.reroll-btn:active .ico{transform:rotate(360deg)}
+.reroll-btn.loading{pointer-events:none;opacity:.6}
+.reroll-btn.loading .ico{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 .film{
-  position:absolute;inset:0;
-  overflow:hidden;
-  cursor:grab;
-  touch-action:none;
-  transition:opacity .7s ease, filter .7s ease;
+  position:absolute;inset:0;overflow:hidden;
+  cursor:grab;touch-action:none;
+  transition:opacity 1.3s ease, filter 1.3s ease;
 }
-.film canvas{
-  position:absolute;inset:0;width:100%;height:100%;
-  display:block;
-}
+.film canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .film.hint::after{
-  content:"Сотри, чтобы открыть ✨";
+  content:"Сотри, чтобы открыть";
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   font-family:'Unbounded',sans-serif;
   font-size:11px;letter-spacing:.18em;text-transform:uppercase;
-  color:rgba(40,30,20,.75);
-  pointer-events:none;
-  white-space:nowrap;
+  color:rgba(40,30,20,.85);pointer-events:none;white-space:nowrap;
   text-shadow:0 1px 0 rgba(255,255,255,.3);
   animation:pulse 2.4s ease-in-out infinite;
 }
-.film.partial::after{
-  content:"Сотри полностью ✨";
-  animation:pulse 1.6s ease-in-out infinite;
-}
-@keyframes pulse{
-  0%,100%{opacity:.55}
-  50%{opacity:.95}
-}
-.film.revealing{
-  opacity:0;
-  filter:blur(8px);
-  pointer-events:none;
-}
+.film.partial::after{content:"Сотри полностью";animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:.95}}
+.film.revealing{opacity:0;filter:blur(14px);pointer-events:none}
 
 .progress{
   position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);
   font-size:9px;letter-spacing:.15em;text-transform:uppercase;
   color:rgba(245,239,226,.5);font-weight:400;
-  opacity:0;transition:opacity .3s;
-  white-space:nowrap;
-  pointer-events:none;
+  opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none;
 }
 .progress.show{opacity:1}
 
+/* ===== КНОПКИ ДЕЙСТВИЙ ===== */
+.actions{
+  display:flex;gap:6px;width:100%;
+  opacity:0;animation:fadeIn 1s ease .55s forwards;
+}
+.full-access,.share-btn{
+  flex:1;position:relative;
+  padding:9px 10px;
+  font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink);background:transparent;
+  border:1px solid var(--accent);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  font-family:'Unbounded',sans-serif;
+  transition:background .25s;
+}
+.full-access:active,.share-btn:active{background:rgba(255,205,150,.14)}
+.full-access.owned{border-color:var(--line-soft);color:rgba(245,239,226,.6);cursor:default}
+.full-access .price{color:var(--accent)}
+.full-access.owned .price{color:rgba(245,239,226,.6)}
+.share-btn{border-color:var(--line)}
+.share-btn .ico{font-size:12px}
+
 .footer{
-  position:relative;
-  padding:5px 14px;
+  position:relative;padding:5px 14px;
   font-size:8px;letter-spacing:.2em;text-transform:uppercase;
   color:rgba(245,239,226,.55);font-weight:400;
   opacity:0;animation:fadeIn 1s ease .7s forwards;
@@ -153,11 +243,88 @@ body::before{
 .footer .mini.l{left:-1.25px;top:50%;transform:translate(-50%,-50%) rotate(45deg)}
 .footer .mini.r{right:-1.25px;top:50%;transform:translate(50%,-50%) rotate(45deg)}
 
+/* ===== МОДАЛКА «ОТПРАВИТЬ ДРУГУ» ===== */
+.modal-backdrop{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(10,10,12,.85);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s ease;
+}
+.modal-backdrop.show{opacity:1;pointer-events:auto}
+
+.modal{
+  position:relative;
+  max-width:340px;width:100%;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  padding:18px 16px;
+  transform:scale(.95);transition:transform .3s cubic-bezier(.2,1,.3,1);
+}
+.modal-backdrop.show .modal{transform:scale(1)}
+
+.modal::before{content:"";position:absolute;inset:0;border:1px solid var(--line)}
+.modal .mc{position:absolute;width:8px;height:8px;border:1px solid var(--accent)}
+.modal .mc.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.modal .mc.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
+.modal .mc.bl{bottom:-1px;left:-1px;border-right:none;border-top:none}
+.modal .mc.br{bottom:-1px;right:-1px;border-left:none;border-top:none}
+
+.modal-title{
+  font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(245,239,226,.7);
+}
+
+.modal-card{
+  width:100%;aspect-ratio:4/5;
+  background:#0f0f12;
+  border:1px solid var(--line);
+  position:relative;
+  overflow:hidden;
+}
+.modal-card canvas{width:100%;height:100%;display:block}
+
+.modal-hint{
+  font-size:8px;letter-spacing:.15em;text-transform:uppercase;
+  color:rgba(245,239,226,.5);
+  text-align:center;line-height:1.6;
+}
+
+.modal-actions{display:flex;gap:8px;width:100%}
+.modal-btn{
+  flex:1;position:relative;
+  padding:10px 8px;
+  font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink);background:transparent;
+  border:1px solid var(--accent);cursor:pointer;
+  font-family:'Unbounded',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:background .25s;
+}
+.modal-btn:active{background:rgba(255,205,150,.14)}
+.modal-btn.secondary{border-color:var(--line)}
+.modal-btn .ico{font-size:12px}
+
+.modal-close{
+  position:absolute;top:-14px;right:-14px;
+  width:28px;height:28px;
+  background:var(--bg);border:1px solid var(--line);
+  color:var(--ink);cursor:pointer;
+  font-family:'Unbounded',sans-serif;font-size:12px;
+  display:flex;align-items:center;justify-content:center;
+  z-index:2;
+  transition:border-color .25s;
+}
+.modal-close:active{border-color:var(--accent)}
+
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
 </head>
 <body>
+
+<div class="bg-symbols" id="bgSymbols"></div>
 
 <div class="frame-outer"></div>
 <div class="frame-inner"></div>
@@ -195,16 +362,45 @@ body::before{
     <div class="line"></div>
   </div>
 
-  <div class="task-wrap" id="taskWrap">
-    <span class="c tl"></span>
-    <span class="c tr"></span>
-    <span class="c bl"></span>
-    <span class="c br"></span>
-    <div class="task" id="task"></div>
-    <div class="film hint" id="film">
-      <canvas id="filmCanvas"></canvas>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-cat="normal">
+      <span class="co tl"></span><span class="co tr"></span><span class="co bl"></span><span class="co br"></span>
+      <span>Обычное</span>
+    </button>
+    <button class="tab" data-cat="hard">
+      <span class="co tl"></span><span class="co tr"></span><span class="co bl"></span><span class="co br"></span>
+      <span>Сложное</span>
+    </button>
+    <button class="tab" data-cat="adult">
+      <span class="co tl"></span><span class="co tr"></span><span class="co bl"></span><span class="co br"></span>
+      <span>Пары 18+</span>
+    </button>
+  </div>
+
+  <!-- ЗАДАНИЕ + КНОПКА REROLL -->
+  <div class="task-row">
+    <div class="task-wrap" id="taskWrap">
+      <span class="c tl"></span>
+      <span class="c tr"></span>
+      <span class="c bl"></span>
+      <span class="c br"></span>
+      <div class="task" id="task"></div>
+      <div class="progress" id="progress"></div>
     </div>
-    <div class="progress" id="progress"></div>
+    <button class="reroll-btn" id="rerollBtn" title="Другое задание">
+      <span class="ico">↻</span>
+      <span class="lbl">Другое</span>
+    </button>
+  </div>
+
+  <!-- ДВЕ КНОПКИ ДЕЙСТВИЙ -->
+  <div class="actions">
+    <button class="full-access" id="fullAccessBtn">
+      <span>Полный доступ</span><span class="price">99₽</span>
+    </button>
+    <button class="share-btn" id="shareBtn">
+      <span class="ico">✦</span><span>Другу</span>
+    </button>
   </div>
 
   <div class="footer">
@@ -215,267 +411,760 @@ body::before{
 
 </div>
 
-<!-- VK Bridge -->
+<!-- МОДАЛКА «ОТПРАВИТЬ ДРУГУ» -->
+<div class="modal-backdrop" id="shareModal">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <span class="mc tl"></span><span class="mc tr"></span>
+    <span class="mc bl"></span><span class="mc br"></span>
+
+    <div class="modal-title">Бросить вызов</div>
+
+    <div class="modal-card">
+      <canvas id="shareCanvas" width="720" height="900"></canvas>
+    </div>
+
+    <div class="modal-hint">
+      Поделись заданием с другом —<br>пусть попробует выполнить
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn" id="shareVkBtn">
+        <span class="ico">✦</span><span>ВКонтакте</span>
+      </button>
+      <button class="modal-btn secondary" id="shareSaveBtn">
+        <span class="ico">↓</span><span>Сохранить</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 
 <script>
-/* ================== VK BRIDGE ================== */
+/* ============================================================
+   НАСТРОЙКИ — ЗАМЕНИ НА СВОИ ДАННЫЕ
+   ============================================================ */
+const APP_URL = 'https://vk.com/appXXXXXXX'; // ← ссылка на твоё мини-приложение ВК
+const APP_NAME = '360';
+const REROLL_PRICE = 0; // 0 = только за рекламу. Или число (например, 5) для оплаты через VK Pay
+
+/* ============================================================
+   ФОНОВЫЕ СИМВОЛЫ
+   ============================================================ */
+(function initBgSymbols(){
+  const container=document.getElementById('bgSymbols');
+  const glyphs=['✦','✧','!','!','!','★','✶','!','·','✴','!','!'];
+  const COUNT=26;
+  function rand(min,max){return Math.random()*(max-min)+min}
+
+  function spawnSymbol(){
+    const el=document.createElement('span');
+    el.className='bg-sym';
+    el.textContent=glyphs[Math.floor(Math.random()*glyphs.length)];
+    const size=rand(14,28);
+    const x=rand(3,95),y=rand(3,92);
+    const opacity=rand(.2,.5);
+    const rot=rand(-30,30);
+    const driftDur=rand(10,18);
+    const driftDelay=rand(0,3);
+    const fadeDelay=rand(0,1.5);
+    const dx1=rand(-80,80),dy1=rand(-100,100);
+    const dx2=rand(-100,100),dy2=rand(-120,120);
+    const dx3=rand(-90,90),dy3=rand(-80,80);
+
+    el.style.left=x+'%';el.style.top=y+'%';
+    el.style.fontSize=size+'px';
+    el.style.setProperty('--sym-opacity',opacity.toFixed(2));
+    el.style.setProperty('--sym-rot',rot+'deg');
+    el.style.setProperty('--drift-dur',driftDur+'s');
+    el.style.setProperty('--drift-delay',driftDelay+'s');
+    el.style.setProperty('--dx1',dx1+'px');el.style.setProperty('--dy1',dy1+'px');
+    el.style.setProperty('--dx2',dx2+'px');el.style.setProperty('--dy2',dy2+'px');
+    el.style.setProperty('--dx3',dx3+'px');el.style.setProperty('--dy3',dy3+'px');
+    el.style.animationDelay=fadeDelay+'s,'+driftDelay+'s';
+    el.style.animationDuration='1.2s,'+driftDur+'s';
+
+    el.addEventListener('click',(e)=>{e.stopPropagation();burst(el)});
+    container.appendChild(el);
+  }
+
+  function burst(sym){
+    const rect=sym.getBoundingClientRect();
+    const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+    const count=7+Math.floor(Math.random()*4);
+    for(let i=0;i<count;i++){
+      const p=document.createElement('span');
+      p.className='burst';
+      const pick=Math.random();
+      p.textContent = pick<0.3 ? '✦' : pick<0.5 ? '·' : pick<0.8 ? '!' : '✧';
+      const angle=(Math.PI*2)*(i/count)+rand(-.3,.3);
+      const dist=rand(55,130);
+      p.style.left=cx+'px';p.style.top=cy+'px';
+      p.style.fontSize=rand(10,18)+'px';
+      p.style.setProperty('--bx',Math.cos(angle)*dist+'px');
+      p.style.setProperty('--by',Math.sin(angle)*dist+'px');
+      p.style.setProperty('--br',rand(-360,360)+'deg');
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(),950);
+    }
+    sym.style.transition='transform .3s ease, opacity .3s ease';
+    sym.style.transform='scale(1.8)';sym.style.opacity='0';
+    setTimeout(()=>sym.remove(),300);
+    setTimeout(spawnSymbol, rand(800,2200));
+  }
+
+  for(let i=0;i<COUNT;i++) spawnSymbol();
+})();
+
+/* ============================================================
+   VK BRIDGE
+   ============================================================ */
 const vkBridge = window.vkBridge;
 
 function initVKBridge(){
-  if(!vkBridge){
-    console.warn('[VK Bridge] не загружен — работаем в обычном режиме');
-    return;
-  }
-
+  if(!vkBridge){console.warn('[VK Bridge] не загружен');return}
   try{
-    // Инициализация мини-приложения
     vkBridge.send('VKWebAppInit');
-
-    // Настройка цветов шапки и статус-бара
     vkBridge.send('VKWebAppSetViewSettings',{
-      status_bar_style:'light',          // светлый текст в статус-баре
-      action_bar_text_color:'#f5efe2',   // цвет текста в action bar
+      status_bar_style:'light',
+      action_bar_text_color:'#f5efe2',
       status_bar_background_color:'#0f0f12',
       action_bar_background_color:'#0f0f12',
       navigation_bar_color:'#0f0f12'
     }).catch(()=>{});
-
-    // Отключаем свайп назад (чтобы не закрывалось приложение случайно)
     vkBridge.send('VKWebAppEnableSwipeBack').catch(()=>{});
-
-    // Слушаем смену темы от VK — если пользователь поменяет тему,
-    // можно адаптироваться (пока оставляем свою тему)
-    vkBridge.subscribe((e)=>{
-      if(!e || !e.detail) return;
-      if(e.detail.type==='VKWebAppUpdateConfig'){
-        const cfg=e.detail.data||{};
-        // appearance: 'light' | 'dark'
-        // scheme: 'bright_light' | 'client_light' | 'space_gray' | 'vkcom_light' и т.д.
-        const scheme=cfg.appearance||cfg.scheme||'';
-        const isDark=/dark|gray|space/i.test(scheme);
-        // При желании можно менять тему здесь:
-        // document.documentElement.style.setProperty('--bg', isDark?'#0f0f12':'#f5efe2');
-        // document.documentElement.style.setProperty('--ink', isDark?'#f5efe2':'#0f0f12');
-      }
-    });
-
-    console.log('[VK Bridge] инициализирован');
-  }catch(err){
-    console.warn('[VK Bridge] ошибка инициализации:',err);
-  }
+  }catch(err){console.warn('[VK Bridge]',err)}
 }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initVKBridge);
+else initVKBridge();
 
-// Запускаем, когда DOM готов
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',initVKBridge);
-}else{
-  initVKBridge();
-}
-
-/* ================== ДАННЫЕ ================== */
-const TASKS=[
+/* ============================================================
+   ДАННЫЕ
+   ============================================================ */
+const TASKS_NORMAL=[
 'Покорми голубя','Сегодня ходи во всем белом','Предложи незнакомому человеку в соц.сети тортика','Картавь весь день','Купи шоколадку и подари любому человку',
 'Обнови аватар в соц. сети на капибару ','Посети зоомогазин','Выучи пару фраз на языке жестов','Одень разные носки','Напиши спасибо трем людям за то, что они существуют',
-'Спроси у незнакомца как у него дела' , 'Попробуй блюдо, которое никогда не ел', 'Позвони в случайный магазин и спроси, есть ли у них единороги', 'Сделай селфи с кем-либо', 'Отыграй роль вампира весь день',  'Говори шепотом весь день', 
- 'Придумай себе новую личность и побудь ею весь день',  'Опубликуй пост: "я хочу чай" ',  'Найди камень идеальной формы',  'Погладь дерево и скажи ему пару ласковых слов',  'Разбавь свою речь словом "мяу" целый день',  
-
-
-
-
-
-
+'Спроси у незнакомца как у него дела','Попробуй блюдо, которое никогда не ел','Позвони в случайный магазин и спроси, есть ли у них единороги','Сделай селфи с кем-либо','Отыграй роль вампира весь день','Говори шепотом весь день',
+'Придумай себе новую личность и побудь ею весь день','Опубликуй пост: "я хочу чай"','Найди камень идеальной формы','Погладь дерево и скажи ему пару ласковых слов','Разбавь свою речь словом "мяу" целый день',
 ];
+const TASKS_HARD=[
+'Заговори с 5 незнакомцами до конца дня','Спой куплет любимой песни в общественном месте','Целый день общайся только вопросами','Съешь что-то очень острое без запивки',
+'Сделай комплимент каждому, с кем сегодня заговоришь','Пройди сегодня 10000 шагов, что бы ни случилось','Напиши письмо себе через 5 лет','Откажись от телефона на 3 часа подряд',
+'Признайся в мелкой правде, которую давно скрывал','Заведи разговор с человеком, с которым давно не общался','Сделай холодный душ с утра','Публично поблагодари человека, который тебе помог',
+'Целый день говори только на «вы»','Проведи час в полной тишине, без музыки и соцсетей','Попроси незнакомца сфотографировать тебя и поблагодари его от души',
+];
+const TASKS_ADULT=[
+'Скажите партнёру три вещи, за которые вы его цените, глядя в глаза','Сделайте друг другу пятиминутный массаж плеч','Потанцуйте медленный танец на кухне без музыки на телефоне',
+'Признайтесь в чём-то приятном, что давно хотели сказать','Покормите друг друга с закрытыми глазами','Напишите друг другу по одному желанию на ближайший месяц',
+'Обнимитесь молча ровно минуту, не разговаривая','Составьте вместе список из 10 причин, почему вам хорошо вдвоём','Приготовьте несложный десерт вдвоём, разделив роли поровну',
+'Сделайте друг другу по одному искреннему комплименту без слов «красивый/красивая»','Вспомните и расскажите друг другу самое смешное совместное воспоминание','Устройте свидание дома при свечах без телефонов',
+'Напишите друг другу короткую записку и спрячьте её в кармане у партнёра','Загадайте вместе одно желание на будущее и никому его не рассказывайте','Проведите вечер без экранов — только разговор вдвоём',
+];
+const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD, adult:TASKS_ADULT};
 
-/* ================== ЛОГИКА ================== */
+/* ============================================================
+   ХРАНИЛИЩЕ
+   ============================================================ */
+function vkStorageSet(key,value){
+  try{ localStorage.setItem('g_'+key,value); }catch(e){}
+  if(vkBridge) return vkBridge.send('VKWebAppStorageSet',{key,value}).catch(()=>{});
+  return Promise.resolve();
+}
+function vkStorageGet(keys){
+  const fallback=()=>{
+    const out={};
+    keys.forEach(k=>{ try{ out[k]=localStorage.getItem('g_'+k)||''; }catch(e){ out[k]=''; } });
+    return out;
+  };
+  if(vkBridge){
+    return vkBridge.send('VKWebAppStorageGet',{keys}).then(r=>{
+      const out={};
+      (r.keys||[]).forEach(k=>{ out[k.key]=k.value; });
+      keys.forEach(k=>{ if(!(k in out) || out[k]==='') out[k]=fallback()[k]; });
+      return out;
+    }).catch(fallback);
+  }
+  return Promise.resolve(fallback());
+}
+
+/* ============================================================
+   ЛОГИКА ЗАДАНИЙ + REROLL
+   ============================================================ */
 function dateKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function seededIndex(seed,len){let h=2166136261>>>0;for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0)%len;}
 
 const taskEl=document.getElementById('task');
-const film=document.getElementById('film');
-const canvas=document.getElementById('filmCanvas');
-const ctx=canvas.getContext('2d');
+const taskWrap=document.getElementById('taskWrap');
 const progressEl=document.getElementById('progress');
+const tabsEl=document.getElementById('tabs');
+const fullAccessBtn=document.getElementById('fullAccessBtn');
+const rerollBtn=document.getElementById('rerollBtn');
+const shareBtn=document.getElementById('shareBtn');
+const shareModal=document.getElementById('shareModal');
+const modalClose=document.getElementById('modalClose');
+const shareVkBtn=document.getElementById('shareVkBtn');
+const shareSaveBtn=document.getElementById('shareSaveBtn');
+const shareCanvas=document.getElementById('shareCanvas');
 
-taskEl.textContent=TASKS[seededIndex(dateKey(),TASKS.length)];
+let currentCategory='normal';
+let unlocked={hard:false, adult:false};
+let fullAccess=false;
+let filmEl=null;
 
-setupFilm();
+// Для Reroll: храним текущий seed и уже выпавшие индексы за сегодня
+let currentSeed='';
+let currentTaskIndex=-1;
+const usedToday={normal:new Set(), hard:new Set(), adult:new Set()};
 
-function setupFilm(){
-  const dpr=Math.max(1,window.devicePixelRatio||1);
-  const rect=film.getBoundingClientRect();
-  canvas.width=rect.width*dpr;
-  canvas.height=rect.height*dpr;
-  ctx.scale(dpr,dpr);
-  drawFilmBase(rect.width,rect.height);
-
-  let drawing=false;
-  let lastX=null,lastY=null;
-  let strokes=0;
-  let revealed=false;
-
-  const RADIUS=26;
-  const REVEAL_THRESHOLD=0.92;
-
-  function pos(e){
-    const r=film.getBoundingClientRect();
-    const t=e.touches?e.touches[0]:e;
-    return {x:t.clientX-r.left,y:t.clientY-r.top};
-  }
-  function erase(x,y){
-    ctx.globalCompositeOperation='destination-out';
-    ctx.beginPath();
-    if(lastX!==null){
-      ctx.lineWidth=RADIUS*2;
-      ctx.lineCap='round';
-      ctx.lineJoin='round';
-      ctx.moveTo(lastX,lastY);
-      ctx.lineTo(x,y);
-      ctx.stroke();
-    }else{
-      ctx.fillStyle='rgba(0,0,0,1)';
-      ctx.beginPath();
-      ctx.arc(x,y,RADIUS,0,Math.PI*2);
-      ctx.fill();
+// Загружаем использованные задания из хранилища при старте
+function loadUsedToday(){
+  try{
+    const raw=localStorage.getItem('used_'+dateKey());
+    if(raw){
+      const data=JSON.parse(raw);
+      if(data.normal) data.normal.forEach(i=>usedToday.normal.add(i));
+      if(data.hard) data.hard.forEach(i=>usedToday.hard.add(i));
+      if(data.adult) data.adult.forEach(i=>usedToday.adult.add(i));
     }
-    lastX=x;lastY=y;
-  }
-
-  function computePercent(){
-    const w=canvas.width,h=canvas.height;
-    const data=ctx.getImageData(0,0,w,h).data;
-    let transparent=0,total=0;
-    const step=32*4;
-    for(let i=3;i<data.length;i+=step){
-      total++;
-      if(data[i]===0) transparent++;
-    }
-    return total>0 ? transparent/total : 0;
-  }
-
-  function checkReveal(){
-    if(revealed)return;
-    const pct=computePercent();
-
-    if(pct>0.05 && pct<REVEAL_THRESHOLD){
-      progressEl.textContent=Math.round(pct*100)+'%';
-      progressEl.classList.add('show');
-      film.classList.add('partial');
-      film.classList.remove('hint');
-    }else if(pct<=0.05){
-      progressEl.classList.remove('show');
-      film.classList.add('hint');
-      film.classList.remove('partial');
-    }
-
-    if(pct>=REVEAL_THRESHOLD){
-      revealed=true;
-      progressEl.textContent='✓';
-      progressEl.classList.add('show');
-      film.classList.remove('hint','partial');
-      film.classList.add('revealing');
-
-      // Вибрация через VK Bridge (если поддерживается)
-      if(vkBridge){
-        vkBridge.send('VKWebAppTapticImpactOccurred',{style:'medium'}).catch(()=>{});
-      }else if(navigator.vibrate){
-        navigator.vibrate(20);
-      }
-
-      setTimeout(()=>{
-        if(film.parentNode) film.remove();
-        progressEl.classList.remove('show');
-      },750);
-    }
-  }
-
-  function start(e){
-    e.preventDefault();
-    drawing=true;
-    film.classList.remove('hint');
-    const p=pos(e);lastX=p.x;lastY=p.y;
-    erase(p.x,p.y);
-  }
-  function move(e){
-    if(!drawing)return;
-    e.preventDefault();
-    const p=pos(e);
-    erase(p.x,p.y);
-    strokes++;
-    if(strokes%4===0) checkReveal();
-  }
-  function end(){
-    if(!drawing)return;
-    drawing=false;lastX=null;lastY=null;
-    checkReveal();
-  }
-
-  film.addEventListener('touchstart',start,{passive:false});
-  film.addEventListener('touchmove',move,{passive:false});
-  film.addEventListener('touchend',end);
-  film.addEventListener('mousedown',start);
-  window.addEventListener('mousemove',move);
-  window.addEventListener('mouseup',end);
+  }catch(e){}
+}
+function saveUsedToday(){
+  try{
+    const data={
+      normal:[...usedToday.normal],
+      hard:[...usedToday.hard],
+      adult:[...usedToday.adult]
+    };
+    localStorage.setItem('used_'+dateKey(),JSON.stringify(data));
+  }catch(e){}
 }
 
-function drawFilmBase(w,h){
+function pickTaskIndex(cat, excludeIndex=-1){
+  const list=CATEGORY_TASKS[cat];
+  const used=usedToday[cat];
+
+  // Если все задания уже были использованы — сбрасываем (кроме текущего)
+  if(used.size >= list.length){
+    used.clear();
+    if(excludeIndex>=0) used.add(excludeIndex);
+  }
+
+  // Собираем доступные индексы
+  const available=[];
+  for(let i=0;i<list.length;i++){
+    if(i!==excludeIndex && !used.has(i)) available.push(i);
+  }
+  if(available.length===0){
+    // fallback: любой индекс кроме текущего
+    for(let i=0;i<list.length;i++){
+      if(i!==excludeIndex) available.push(i);
+    }
+  }
+  // Случайный выбор
+  const idx=available[Math.floor(Math.random()*available.length)];
+  used.add(idx);
+  saveUsedToday();
+  return idx;
+}
+
+/* ---- ПЛЁНКА ---- */
+function buildFilm(){
+  if(filmEl && filmEl.parentNode) filmEl.remove();
+  const div=document.createElement('div');
+  div.className='film hint';
+  div.id='film';
+  const cv=document.createElement('canvas');
+  cv.id='filmCanvas';
+  div.appendChild(cv);
+  taskWrap.insertBefore(div, progressEl);
+  filmEl=div;
+  progressEl.classList.remove('show');
+  progressEl.textContent='';
+  initFilmInteraction(div, cv);
+}
+
+function drawFilmBase(ctx,w,h){
   const g=ctx.createLinearGradient(0,0,w,h);
-  g.addColorStop(0,'#d9d4c7');
-  g.addColorStop(0.35,'#efeae0');
-  g.addColorStop(0.55,'#c9c2b2');
-  g.addColorStop(0.8,'#e5dfd1');
+  g.addColorStop(0,'#d9d4c7');g.addColorStop(0.35,'#efeae0');
+  g.addColorStop(0.55,'#c9c2b2');g.addColorStop(0.8,'#e5dfd1');
   g.addColorStop(1,'#b8b1a1');
-  ctx.fillStyle=g;
-  ctx.fillRect(0,0,w,h);
-
-  ctx.save();
-  ctx.globalAlpha=0.18;
+  ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+  ctx.save();ctx.globalAlpha=0.18;
   for(let i=-h;i<w+h;i+=22){
-    ctx.strokeStyle='rgba(255,255,255,.6)';
-    ctx.lineWidth=1;
-    ctx.beginPath();
-    ctx.moveTo(i,0);
-    ctx.lineTo(i+h,h);
-    ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+h,h);ctx.stroke();
   }
   ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha=0.08;
-  ctx.strokeStyle='#000';
-  ctx.lineWidth=0.5;
-  for(let y=0;y<h;y+=4){
-    ctx.beginPath();
-    ctx.moveTo(0,y);
-    ctx.lineTo(w,y);
-    ctx.stroke();
-  }
+  ctx.save();ctx.globalAlpha=0.08;ctx.strokeStyle='#000';ctx.lineWidth=0.5;
+  for(let y=0;y<h;y+=4){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
   ctx.restore();
-
   const shine=ctx.createLinearGradient(0,0,0,h);
   shine.addColorStop(0,'rgba(255,255,255,.35)');
   shine.addColorStop(0.25,'rgba(255,255,255,0)');
   shine.addColorStop(0.75,'rgba(0,0,0,0)');
   shine.addColorStop(1,'rgba(0,0,0,.12)');
-  ctx.fillStyle=shine;
-  ctx.fillRect(0,0,w,h);
+  ctx.fillStyle=shine;ctx.fillRect(0,0,w,h);
 }
 
-let resizeTimer;
-window.addEventListener('resize',()=>{
-  if(film.parentNode && !film.classList.contains('revealing')){
+function initFilmInteraction(film, canvas){
+  const ctx=canvas.getContext('2d');
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  const rect=film.getBoundingClientRect();
+  canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
+  ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr,dpr);
+  drawFilmBase(ctx,rect.width,rect.height);
+
+  let drawing=false,lastX=null,lastY=null,revealed=false,checkScheduled=false;
+  const RADIUS=26,SOFT_RADIUS=34,REVEAL_THRESHOLD=0.80;
+
+  function pos(e){const r=film.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+  function stamp(x,y){
+    const grad=ctx.createRadialGradient(x,y,0,x,y,SOFT_RADIUS);
+    grad.addColorStop(0,'rgba(0,0,0,1)');grad.addColorStop(0.55,'rgba(0,0,0,1)');
+    grad.addColorStop(0.85,'rgba(0,0,0,0.6)');grad.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(x,y,SOFT_RADIUS,0,Math.PI*2);ctx.fill();
+  }
+  function erase(x,y){
+    ctx.globalCompositeOperation='destination-out';
+    if(lastX!==null){
+      const dist=Math.hypot(x-lastX,y-lastY);
+      const step=RADIUS*0.35;
+      const steps=Math.max(1,Math.ceil(dist/step));
+      for(let i=1;i<=steps;i++){
+        stamp(lastX+(x-lastX)*(i/steps), lastY+(y-lastY)*(i/steps));
+      }
+    }else stamp(x,y);
+    lastX=x;lastY=y;
+  }
+  function computePercent(){
+    const w=canvas.width,h=canvas.height;
+    const data=ctx.getImageData(0,0,w,h).data;
+    let transparent=0,total=0;const step=32*4;
+    for(let i=3;i<data.length;i+=step){total++;if(data[i]===0) transparent++;}
+    return total>0 ? transparent/total : 0;
+  }
+  function scheduleCheck(){
+    if(checkScheduled) return;checkScheduled=true;
+    requestAnimationFrame(()=>{checkScheduled=false;checkReveal()});
+  }
+  function checkReveal(){
+    if(revealed)return;
+    const pct=computePercent();
+    if(pct>0.05 && pct<REVEAL_THRESHOLD){
+      progressEl.textContent=Math.round(pct*100)+'%';
+      progressEl.classList.add('show');
+      film.classList.add('partial');film.classList.remove('hint');
+    }else if(pct<=0.05){
+      progressEl.classList.remove('show');
+      film.classList.add('hint');film.classList.remove('partial');
+    }
+    if(pct>=REVEAL_THRESHOLD){
+      revealed=true;
+      progressEl.textContent='✓';progressEl.classList.add('show');
+      film.classList.remove('hint','partial');film.classList.add('revealing');
+      if(vkBridge) vkBridge.send('VKWebAppTapticImpactOccurred',{style:'medium'}).catch(()=>{});
+      else if(navigator.vibrate) navigator.vibrate(20);
+      setTimeout(()=>{
+        if(film.parentNode) film.remove();
+        progressEl.classList.remove('show');
+      },1300);
+    }
+  }
+  function start(e){
+    e.preventDefault();drawing=true;film.classList.remove('hint');
+    if(film.setPointerCapture){try{film.setPointerCapture(e.pointerId)}catch(err){}}
+    const p=pos(e);lastX=p.x;lastY=p.y;erase(p.x,p.y);scheduleCheck();
+  }
+  function move(e){if(!drawing)return;e.preventDefault();const p=pos(e);erase(p.x,p.y);scheduleCheck()}
+  function end(){if(!drawing)return;drawing=false;lastX=null;lastY=null;checkReveal()}
+
+  film.addEventListener('pointerdown',start);
+  film.addEventListener('pointermove',move);
+  film.addEventListener('pointerup',end);
+  film.addEventListener('pointercancel',end);
+  film.addEventListener('pointerleave',e=>{if(drawing) end()});
+
+  let resizeTimer;
+  window.addEventListener('resize',()=>{
+    if(!film.parentNode || film.classList.contains('revealing')) return;
     clearTimeout(resizeTimer);
     resizeTimer=setTimeout(()=>{
-      const dpr=Math.max(1,window.devicePixelRatio||1);
-      const rect=film.getBoundingClientRect();
-      canvas.width=rect.width*dpr;
-      canvas.height=rect.height*dpr;
-      ctx.setTransform(1,0,0,1,0,0);
-      ctx.scale(dpr,dpr);
-      drawFilmBase(rect.width,rect.height);
+      const dpr2=Math.max(1,window.devicePixelRatio||1);
+      const r2=film.getBoundingClientRect();
+      canvas.width=r2.width*dpr2;canvas.height=r2.height*dpr2;
+      ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr2,dpr2);
+      drawFilmBase(ctx,r2.width,r2.height);
     },200);
+  });
+}
+
+/* ---- ПЕРЕКЛЮЧЕНИЕ КАТЕГОРИИ ---- */
+function switchCategory(cat, forceNew=false){
+  currentCategory=cat;
+  [...tabsEl.querySelectorAll('.tab')].forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.cat===cat);
+  });
+  const list=CATEGORY_TASKS[cat];
+
+  if(forceNew){
+    // Reroll: выбираем новое задание, исключая текущее
+    currentTaskIndex = pickTaskIndex(cat, currentTaskIndex);
+    currentSeed = dateKey()+':'+cat+':'+currentTaskIndex+':'+Math.random();
+  }else if(currentSeed && currentSeed.startsWith(dateKey()+':'+cat)){
+    // Та же категория — оставляем текущее задание
+    // (но индекс уже должен быть установлен)
+  }else{
+    // Первая загрузка категории за сегодня — детерминированный выбор по дате
+    currentTaskIndex = seededIndex(dateKey()+':'+cat, list.length);
+    currentSeed = dateKey()+':'+cat;
+    usedToday[cat].add(currentTaskIndex);
+    saveUsedToday();
+  }
+
+  taskEl.textContent=list[currentTaskIndex];
+  buildFilm();
+}
+
+function updateLocks(){
+  [...tabsEl.querySelectorAll('.tab')].forEach(btn=>{
+    const cat=btn.dataset.cat;
+    if(cat==='normal'){ btn.classList.remove('locked'); return; }
+    const isOpen = fullAccess || unlocked[cat];
+    btn.classList.toggle('locked', !isOpen);
+  });
+  if(fullAccess){
+    fullAccessBtn.classList.add('owned');
+    fullAccessBtn.innerHTML='<span>Доступ активен ✓</span>';
+  }
+}
+
+/* ============================================================
+   REROLL — «ДРУГОЕ ЗАДАНИЕ»
+   ============================================================ */
+function doReroll(){
+  if(rerollBtn.classList.contains('loading')) return;
+
+  // Если категория закрыта — сначала открываем её
+  if(currentCategory!=='normal' && !fullAccess && !unlocked[currentCategory]){
+    requestUnlock(currentCategory);
+    return;
+  }
+
+  rerollBtn.classList.add('loading');
+
+  const grant=()=>{
+    // Успех: меняем задание
+    switchCategory(currentCategory, true);
+    setTimeout(()=>rerollBtn.classList.remove('loading'), 500);
+    if(vkBridge) vkBridge.send('VKWebAppTapticImpactOccurred',{style:'light'}).catch(()=>{});
+    else if(navigator.vibrate) navigator.vibrate(10);
+  };
+
+  const fail=()=>{
+    rerollBtn.classList.remove('loading');
+  };
+
+  if(vkBridge){
+    // Сначала проверяем наличие рекламы
+    vkBridge.send('VKWebAppCheckNativeAds',{ad_format:'reward'})
+      .then(r=>{
+        if(!r || !r.result){
+          alert('Реклама сейчас недоступна, попробуй позже');
+          fail();
+          return Promise.reject();
+        }
+        return vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'});
+      })
+      .then(res=>{
+        if(res && res.result) grant();
+        else fail();
+      })
+      .catch(()=>fail());
+  }else{
+    // Эмуляция вне VK
+    if(confirm('Показать рекламу (эмуляция) и получить другое задание?')) grant();
+    else fail();
+  }
+}
+
+rerollBtn.addEventListener('click', doReroll);
+
+/* ============================================================
+   ПОКУПКА / РЕКЛАМА ДЛЯ КАТЕГОРИЙ
+   ============================================================ */
+function requestUnlock(cat){
+  const grant=()=>{
+    unlocked[cat]=true;
+    vkStorageSet('unlock_'+cat+'_'+dateKey(),'1');
+    updateLocks();
+    switchCategory(cat);
+  };
+  if(vkBridge){
+    vkBridge.send('VKWebAppCheckNativeAds',{ad_format:'reward'})
+      .then(r=>{
+        if(!r || !r.result){
+          alert('Реклама сейчас недоступна, попробуй позже');
+          return Promise.reject();
+        }
+        return vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'});
+      })
+      .then(res=>{if(res && res.result) grant()})
+      .catch(()=>{});
+  }else{
+    if(confirm('Показ рекламы (эмуляция). Открыть раздел на сегодня?')) grant();
+  }
+}
+
+function requestFullAccess(){
+  if(fullAccess) return;
+  const grant=()=>{
+    fullAccess=true;
+    vkStorageSet('full_access_purchase_date', new Date().toISOString());
+    updateLocks();
+  };
+  if(vkBridge){
+    vkBridge.send('VKWebAppShowOrderBox',{type:'item', item:'full_access_year'})
+      .then(res=>{if(res && res.success) grant()})
+      .catch(err=>{console.warn('[VK Pay]',err);alert('Не удалось выполнить оплату')});
+  }else{
+    if(confirm('Оплата 99₽ (эмуляция). Открыть все задания на год?')) grant();
+  }
+}
+
+tabsEl.addEventListener('click',(e)=>{
+  const btn=e.target.closest('.tab');
+  if(!btn) return;
+  const cat=btn.dataset.cat;
+  if(cat===currentCategory) return;
+  if(cat==='normal' || fullAccess || unlocked[cat]){
+    switchCategory(cat);
+  }else{
+    requestUnlock(cat);
   }
 });
+fullAccessBtn.addEventListener('click', requestFullAccess);
+
+/* ============================================================
+   «ОТПРАВИТЬ ДРУГУ» — МОДАЛКА С КАРТОЧКОЙ
+   ============================================================ */
+
+/* Рендер красивой карточки на canvas */
+function renderShareCard(){
+  const cv=shareCanvas;
+  const ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+
+  // Фон
+  const bg=ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#0f0f12');
+  bg.addColorStop(1,'#1a1820');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  // Радиальное свечение
+  const glow=ctx.createRadialGradient(W/2,H*0.35,0,W/2,H*0.35,W*0.7);
+  glow.addColorStop(0,'rgba(255,180,120,.12)');
+  glow.addColorStop(1,'rgba(255,180,120,0)');
+  ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+
+  // Рамка
+  ctx.strokeStyle='rgba(245,239,226,.28)';
+  ctx.lineWidth=2;
+  ctx.strokeRect(30,30,W-60,H-60);
+  ctx.strokeStyle='rgba(245,239,226,.14)';
+  ctx.strokeRect(42,42,W-84,H-84);
+
+  // Угловые акценты
+  const accent='rgba(255,205,150,.75)';
+  ctx.strokeStyle=accent;ctx.lineWidth=2;
+  const cs=22;
+  // TL
+  ctx.beginPath();ctx.moveTo(30,30+cs);ctx.lineTo(30,30);ctx.lineTo(30+cs,30);ctx.stroke();
+  // TR
+  ctx.beginPath();ctx.moveTo(W-30-cs,30);ctx.lineTo(W-30,30);ctx.lineTo(W-30,30+cs);ctx.stroke();
+  // BL
+  ctx.beginPath();ctx.moveTo(30,H-30-cs);ctx.lineTo(30,H-30);ctx.lineTo(30+cs,H-30);ctx.stroke();
+  // BR
+  ctx.beginPath();ctx.moveTo(W-30-cs,H-30);ctx.lineTo(W-30,H-30);ctx.lineTo(W-30,H-30-cs);ctx.stroke();
+
+  // Логотип-звезда
+  const cx=W/2, cy=180;
+  const starGrad=ctx.createLinearGradient(cx-80,cy-80,cx+80,cy+80);
+  starGrad.addColorStop(0,'#fff4dd');
+  starGrad.addColorStop(0.5,'#ffd29a');
+  starGrad.addColorStop(1,'#ff8e53');
+  ctx.fillStyle=starGrad;
+  ctx.shadowColor='rgba(255,200,140,.5)';
+  ctx.shadowBlur=30;
+  // Рисуем 4-лучевую звезду через кривые
+  ctx.beginPath();
+  const R=70, r=8;
+  ctx.moveTo(cx, cy-R);
+  ctx.quadraticCurveTo(cx+r, cy-r, cx+R, cy);
+  ctx.quadraticCurveTo(cx+r, cy+r, cx, cy+R);
+  ctx.quadraticCurveTo(cx-r, cy+r, cx-R, cy);
+  ctx.quadraticCurveTo(cx-r, cy-r, cx, cy-R);
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur=0;
+
+  // Внутренняя звезда (белая)
+  ctx.fillStyle='rgba(255,255,255,.9)';
+  ctx.beginPath();
+  const R2=14, r2=1.5;
+  ctx.moveTo(cx, cy-R2);
+  ctx.quadraticCurveTo(cx+r2, cy-r2, cx+R2, cy);
+  ctx.quadraticCurveTo(cx+r2, cy+r2, cx, cy+R2);
+  ctx.quadraticCurveTo(cx-r2, cy+r2, cx-R2, cy);
+  ctx.quadraticCurveTo(cx-r2, cy-r2, cx, cy-R2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Заголовок
+  ctx.fillStyle='rgba(245,239,226,.75)';
+  ctx.font='700 22px Unbounded, sans-serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.letterSpacing='8px';
+  ctx.fillText('ВЫЗОВ   ПРИНЯТ?', W/2, 310);
+
+  // Разделитель
+  ctx.strokeStyle='rgba(245,239,226,.28)';
+  ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(W/2-80,350);ctx.lineTo(W/2-10,350);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W/2+10,350);ctx.lineTo(W/2+80,350);ctx.stroke();
+  // Ромб
+  ctx.fillStyle=accent;
+  ctx.beginPath();
+  ctx.moveTo(W/2,346);ctx.lineTo(W/2+4,350);ctx.lineTo(W/2,354);ctx.lineTo(W/2-4,350);
+  ctx.closePath();ctx.fill();
+
+  // Текст задания (с переносом строк)
+  const taskText = taskEl.textContent || 'Задание дня';
+  ctx.fillStyle='#f5efe2';
+  ctx.font='400 34px Unbounded, sans-serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='top';
+  wrapText(ctx, taskText, W/2, 400, W-140, 48);
+
+  // Категория (метка)
+  const catLabels={normal:'ОБЫЧНОЕ', hard:'СЛОЖНОЕ', adult:'ПАРЫ 18+'};
+  ctx.fillStyle=accent;
+  ctx.font='700 16px Unbounded, sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(catLabels[currentCategory] || 'ЗАДАНИЕ', W/2, H-180);
+
+  // Название приложения
+  ctx.fillStyle='rgba(245,239,226,.5)';
+  ctx.font='400 14px Unbounded, sans-serif';
+  ctx.fillText(APP_NAME + ' — ежедневные задания', W/2, H-130);
+
+  // Ссылка
+  ctx.fillStyle='rgba(245,239,226,.35)';
+  ctx.font='400 12px Unbounded, sans-serif';
+  ctx.fillText(APP_URL.replace('https://',''), W/2, H-100);
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  const words = text.split(' ');
+  let line = '';
+  let curY = y;
+  for(let n=0; n<words.length; n++){
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    if(metrics.width > maxWidth && n > 0){
+      ctx.fillText(line.trim(), x, curY);
+      line = words[n] + ' ';
+      curY += lineHeight;
+    }else{
+      line = testLine;
+    }
+  }
+  ctx.fillText(line.trim(), x, curY);
+}
+
+/* Открытие модалки */
+function openShareModal(){
+  renderShareCard();
+  shareModal.classList.add('show');
+}
+function closeShareModal(){
+  shareModal.classList.remove('show');
+}
+
+shareBtn.addEventListener('click', openShareModal);
+modalClose.addEventListener('click', closeShareModal);
+shareModal.addEventListener('click',(e)=>{
+  if(e.target===shareModal) closeShareModal();
+});
+
+/* Поделиться ВКонтакте */
+shareVkBtn.addEventListener('click',()=>{
+  const taskText = taskEl.textContent || '';
+  const catLabels={normal:'обычное', hard:'сложное', adult:'для пар 18+'};
+  const message = `Мне выпало ${catLabels[currentCategory]} задание:\n\n«${taskText}»\n\nА ты сможешь? ✦`;
+
+  if(vkBridge){
+    // Вариант 1: пост на стену с ссылкой на приложение
+    vkBridge.send('VKWebAppShowWallPostBox',{
+      message: message,
+      attachments: APP_URL
+    }).then(()=>{
+      closeShareModal();
+    }).catch(err=>{
+      console.warn('[Share]',err);
+      // Fallback: просто share ссылки
+      vkBridge.send('VKWebAppShare',{link:APP_URL})
+        .then(()=>closeShareModal())
+        .catch(()=>{});
+    });
+  }else{
+    // Эмуляция вне VK
+    if(confirm('Поделиться в ВК (эмуляция):\n\n'+message+'\n\n'+APP_URL)){
+      closeShareModal();
+    }
+  }
+});
+
+/* Сохранить картинку */
+shareSaveBtn.addEventListener('click',()=>{
+  try{
+    const dataUrl = shareCanvas.toDataURL('image/png');
+    const a=document.createElement('a');
+    a.href=dataUrl;
+    a.download='360_challenge.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    if(vkBridge) vkBridge.send('VKWebAppTapticImpactOccurred',{style:'light'}).catch(()=>{});
+    else if(navigator.vibrate) navigator.vibrate(15);
+
+    setTimeout(closeShareModal, 400);
+  }catch(err){
+    console.warn('[Save]',err);
+    alert('Не удалось сохранить картинку');
+  }
+});
+
+/* ============================================================
+   СТАРТ
+   ============================================================ */
+loadUsedToday();
+switchCategory('normal');
+
+vkStorageGet(['unlock_hard_'+dateKey(),'unlock_adult_'+dateKey(),'full_access_purchase_date'])
+  .then(vals=>{
+    unlocked.hard = vals['unlock_hard_'+dateKey()]==='1';
+    unlocked.adult = vals['unlock_adult_'+dateKey()]==='1';
+    const purchaseDateStr = vals['full_access_purchase_date'];
+    if(purchaseDateStr){
+      const diffDays=(Date.now()-new Date(purchaseDateStr).getTime())/86400000;
+      fullAccess = diffDays<=365;
+    }
+    updateLocks();
+  })
+  .catch(()=>{});
 </script>
 </body>
 </html>
