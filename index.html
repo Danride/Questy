@@ -448,6 +448,7 @@ body::before{
 const APP_URL = 'https://vk.ru/app54747359'; //
 const APP_NAME = '360';
 const REROLL_PRICE = 0; // 0 = только за рекламу. Или число (например, 5) для оплаты через VK Pay
+const MAX_REROLLS_PER_DAY = 3; // Максимум смен задания за рекламу в сутки
 
 /* ============================================================
    ФОНОВЫЕ СИМВОЛЫ
@@ -617,6 +618,9 @@ let currentSeed='';
 let currentTaskIndex=-1;
 const usedToday={normal:new Set(), hard:new Set(), adult:new Set()};
 
+// Счётчик смен задания за сегодня (через рекламу)
+let rerollsToday = 0;
+
 // Загружаем использованные задания из хранилища при старте
 function loadUsedToday(){
   try{
@@ -637,6 +641,22 @@ function saveUsedToday(){
       adult:[...usedToday.adult]
     };
     localStorage.setItem('used_'+dateKey(),JSON.stringify(data));
+  }catch(e){}
+}
+
+// Загрузка и сохранение счётчика reroll
+function loadRerollsToday(){
+  try{
+    const raw=localStorage.getItem('rerolls_'+dateKey());
+    rerollsToday = raw ? parseInt(raw, 10) : 0;
+    if(isNaN(rerollsToday)) rerollsToday = 0;
+  }catch(e){
+    rerollsToday = 0;
+  }
+}
+function saveRerollsToday(){
+  try{
+    localStorage.setItem('rerolls_'+dateKey(), String(rerollsToday));
   }catch(e){}
 }
 
@@ -845,6 +865,12 @@ function updateLocks(){
 function doReroll(){
   if(rerollBtn.classList.contains('loading')) return;
 
+  // Проверка лимита смен задания за сегодня
+  if(rerollsToday >= MAX_REROLLS_PER_DAY){
+    alert('Достигнут лимит смен задания на сегодня (' + MAX_REROLLS_PER_DAY + ' раза). Попробуй завтра!');
+    return;
+  }
+
   // Если категория закрыта — сначала открываем её
   if(currentCategory!=='normal' && !fullAccess && !unlocked[currentCategory]){
     requestUnlock(currentCategory);
@@ -856,6 +882,8 @@ function doReroll(){
   const grant=()=>{
     // Успех: меняем задание
     switchCategory(currentCategory, true);
+    rerollsToday++;
+    saveRerollsToday();
     setTimeout(()=>rerollBtn.classList.remove('loading'), 500);
     if(vkBridge) vkBridge.send('VKWebAppTapticImpactOccurred',{style:'light'}).catch(()=>{});
     else if(navigator.vibrate) navigator.vibrate(10);
@@ -1151,6 +1179,7 @@ shareSaveBtn.addEventListener('click',()=>{
    СТАРТ
    ============================================================ */
 loadUsedToday();
+loadRerollsToday(); // Загружаем счётчик смен задания
 switchCategory('normal');
 
 vkStorageGet(['unlock_hard_'+dateKey(),'unlock_adult_'+dateKey(),'full_access_purchase_date'])
