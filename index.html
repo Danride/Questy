@@ -24,7 +24,7 @@ body{
   display:flex;align-items:center;justify-content:center;
   padding:14px;
   padding-top:calc(14px + env(safe-area-inset-top));
-  padding-bottom:calc(14px + env(safe-area-inset-bottom));
+  padding-bottom:calc(14px + env(safe-area-inset-bottom) + var(--ad-banner-height, 0px));
   text-align:center;position:relative;
 }
 body::before{
@@ -212,7 +212,7 @@ body::before{
   display:flex;gap:6px;width:100%;
   opacity:0;animation:fadeIn 1s ease .55s forwards;
 }
-.full-access,.share-btn{
+.share-btn{
   flex:1;position:relative;
   padding:9px 10px;
   font-size:9px;letter-spacing:.08em;text-transform:uppercase;
@@ -222,11 +222,7 @@ body::before{
   font-family:'Unbounded',sans-serif;
   transition:background .25s;
 }
-.full-access:active,.share-btn:active{background:rgba(255,205,150,.14)}
-.full-access.owned{border-color:var(--line-soft);color:rgba(245,239,226,.6);cursor:default}
-.full-access .price{color:var(--accent)}
-.full-access.owned .price{color:rgba(245,239,226,.6)}
-.share-btn{border-color:var(--line)}
+.share-btn:active{background:rgba(255,205,150,.14)}
 .share-btn .ico{font-size:12px}
 
 .footer{
@@ -389,9 +385,6 @@ body::before{
   </div>
 
   <div class="actions">
-    <button class="full-access" id="fullAccessBtn">
-      <span>Полный доступ</span><span class="price">99₽</span>
-    </button>
     <button class="share-btn" id="shareBtn">
       <span class="ico">✦</span><span>Поделиться</span>
     </button>
@@ -516,10 +509,29 @@ function initVKBridge(){
       navigation_bar_color:'#0f0f12'
     }).catch(()=>{});
     vkBridge.send('VKWebAppEnableSwipeBack').catch(()=>{});
+    
+    initBannerAd();
   }catch(err){console.warn('[VK Bridge]',err)}
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initVKBridge);
 else initVKBridge();
+
+function initBannerAd(){
+  if(!vkBridge) return;
+  
+  vkBridge.send('VKWebAppShowBannerAd', {
+    banner_location: 'bottom'
+  })
+  .then(result => {
+    if(result && result.result){
+      console.log('[Banner Ad] показан успешно');
+      document.body.style.setProperty('--ad-banner-height', '80px');
+    }
+  })
+  .catch(err => {
+    console.warn('[Banner Ad] не удалось показать:', err);
+  });
+}
 
 const TASKS_NORMAL=[
 'Покорми голубя','Сегодня ходи во всем белом','Предложи незнакомому человеку в соц.сети тортика','Картавь весь день','Купи шоколадку и подари любому человку',
@@ -571,7 +583,6 @@ const taskEl=document.getElementById('task');
 const taskWrap=document.getElementById('taskWrap');
 const progressEl=document.getElementById('progress');
 const tabsEl=document.getElementById('tabs');
-const fullAccessBtn=document.getElementById('fullAccessBtn');
 const rerollBtn=document.getElementById('rerollBtn');
 const rerollLbl=document.getElementById('rerollLbl');
 const shareBtn=document.getElementById('shareBtn');
@@ -822,10 +833,6 @@ function updateLocks(){
     const isOpen = fullAccess || unlocked[cat];
     btn.classList.toggle('locked', !isOpen);
   });
-  if(fullAccess){
-    fullAccessBtn.classList.add('owned');
-    fullAccessBtn.innerHTML='<span>Доступ активен ✓</span>';
-  }
 }
 
 function doReroll(){
@@ -840,7 +847,6 @@ function doReroll(){
   rerollBtn.classList.add('loading');
 
   const grant=()=>{
-    // Меняем задание в ТЕКУЩЕЙ категории
     switchCategory(currentCategory, true);
     rerollsToday++;
     saveRerollsToday();
@@ -869,7 +875,6 @@ function doReroll(){
           })
           .catch(()=> 'error');
         
-        // Если прошло 5 секунд, считаем просмотр успешным
         const timerPromise = new Promise(resolve => {
           setTimeout(()=> resolve('timeout'), 5000);
         });
@@ -914,22 +919,6 @@ function requestUnlock(cat){
   }
 }
 
-function requestFullAccess(){
-  if(fullAccess) return;
-  const grant=()=>{
-    fullAccess=true;
-    vkStorageSet('full_access_purchase_date', new Date().toISOString());
-    updateLocks();
-  };
-  if(vkBridge){
-    vkBridge.send('VKWebAppShowOrderBox',{type:'item', item:'full_access_year'})
-      .then(res=>{if(res && res.success) grant()})
-      .catch(err=>{console.warn('[VK Pay]',err);alert('Не удалось выполнить оплату')});
-  }else{
-    if(confirm('Оплата 99₽ (эмуляция). Открыть все задания на год?')) grant();
-  }
-}
-
 tabsEl.addEventListener('click',(e)=>{
   const btn=e.target.closest('.tab');
   if(!btn) return;
@@ -941,7 +930,6 @@ tabsEl.addEventListener('click',(e)=>{
     requestUnlock(cat);
   }
 });
-fullAccessBtn.addEventListener('click', requestFullAccess);
 
 function renderShareCard(){
   const cv=shareCanvas;
@@ -1088,7 +1076,6 @@ shareSaveBtn.addEventListener('click',()=>{
     setTimeout(closeShareModal, 400);
   }catch(err){
     console.warn('[Save]',err);
-    alert('Не удалось сохранить картинку');
   }
 });
 
