@@ -26,6 +26,7 @@ body{
   padding-top:calc(14px + env(safe-area-inset-top));
   padding-bottom:calc(14px + env(safe-area-inset-bottom) + var(--ad-banner-height, 0px));
   text-align:center;position:relative;
+  transition:padding-bottom .3s ease;
 }
 body::before{
   content:"";position:absolute;inset:0;pointer-events:none;
@@ -310,6 +311,22 @@ body::before{
 }
 .modal-close:active{border-color:var(--accent)}
 
+/* ===== PLACEHOLDER БАННЕР (для локальной проверки) ===== */
+#bannerTest{
+  position:fixed;bottom:0;left:0;right:0;
+  height:80px;
+  background:linear-gradient(90deg,#2a1f3d,#4a2f5d);
+  color:#fff;
+  font-family:'Unbounded',sans-serif;
+  font-size:11px;
+  display:none;
+  align-items:center;justify-content:center;
+  z-index:99;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-top:1px solid rgba(255,205,150,.3);
+}
+#bannerTest.show{display:flex}
+
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
@@ -422,6 +439,10 @@ body::before{
   </div>
 </div>
 
+<!-- PLACEHOLDER БАННЕР (для локальной проверки в браузере) -->
+<!-- УДАЛИ ЭТОТ БЛОК ПЕРЕД ПУБЛИКАЦИЕЙ! -->
+<div id="bannerTest">✦ Здесь будет баннер VK Ads ✦</div>
+
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 
 <script>
@@ -497,8 +518,68 @@ const MAX_REROLLS_PER_DAY = 3;
 
 const vkBridge = window.vkBridge;
 
+/* ============================================================
+   БАННЕРНАЯ РЕКЛАМА (УЛУЧШЕННАЯ ВЕРСИЯ)
+   ============================================================ */
+function initBannerAd(){
+  const bannerTest = document.getElementById('bannerTest');
+  
+  // Если VK Bridge недоступен — показываем placeholder для теста
+  if(!vkBridge){
+    document.body.style.setProperty('--ad-banner-height', '80px');
+    if(bannerTest) bannerTest.classList.add('show');
+    console.log('[Banner] VK Bridge недоступен, показан placeholder');
+    return;
+  }
+  
+  // Слушаем события баннера от VK
+  vkBridge.subscribe((event) => {
+    if(!event.detail) return;
+    
+    // Баннер получен — ставим реальную высоту
+    if(event.detail.type === 'VKWebAppBannerAdReceived'){
+      const height = (event.detail.data && event.detail.data.banner_height) || 80;
+      document.body.style.setProperty('--ad-banner-height', height + 'px');
+      console.log('[Banner] получен, высота:', height);
+    }
+    
+    // Баннер скрыт/закрыт — обнуляем отступ
+    if(event.detail.type === 'VKWebAppBannerAdClosed' || 
+       event.detail.type === 'VKWebAppBannerAdHidden'){
+      document.body.style.setProperty('--ad-banner-height', '0px');
+      console.log('[Banner] закрыт');
+    }
+  });
+  
+  // Проверяем доступность баннерной рекламы
+  vkBridge.send('VKWebAppCheckBannerAd')
+    .then(r => {
+      if(r && r.result){
+        console.log('[Banner] реклама доступна, показываем...');
+        return vkBridge.send('VKWebAppShowBannerAd', {
+          banner_location: 'bottom'
+        });
+      }else{
+        console.log('[Banner] реклама недоступна');
+        return Promise.reject('banner_not_available');
+      }
+    })
+    .then(res => {
+      if(res && res.result){
+        console.log('[Banner] показан успешно');
+      }
+    })
+    .catch(err => {
+      console.warn('[Banner] не удалось показать:', err);
+    });
+}
+
 function initVKBridge(){
-  if(!vkBridge){console.warn('[VK Bridge] не загружен');return}
+  if(!vkBridge){
+    console.warn('[VK Bridge] не загружен');
+    initBannerAd(); // всё равно вызываем для показа placeholder
+    return;
+  }
   try{
     vkBridge.send('VKWebAppInit');
     vkBridge.send('VKWebAppSetViewSettings',{
@@ -515,23 +596,6 @@ function initVKBridge(){
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initVKBridge);
 else initVKBridge();
-
-function initBannerAd(){
-  if(!vkBridge) return;
-  
-  vkBridge.send('VKWebAppShowBannerAd', {
-    banner_location: 'bottom'
-  })
-  .then(result => {
-    if(result && result.result){
-      console.log('[Banner Ad] показан успешно');
-      document.body.style.setProperty('--ad-banner-height', '80px');
-    }
-  })
-  .catch(err => {
-    console.warn('[Banner Ad] не удалось показать:', err);
-  });
-}
 
 const TASKS_NORMAL=[
 'Покорми голубя','Сегодня ходи во всем белом','Предложи незнакомому человеку в соц.сети тортика','Картавь весь день','Купи шоколадку и подари любому человку',
