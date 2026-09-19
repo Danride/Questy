@@ -296,6 +296,7 @@ body::before{
   transition:background .25s;
 }
 .modal-btn:active{background:rgba(255,205,150,.14)}
+.modal-btn:disabled{opacity:.5;cursor:wait}
 .modal-btn.secondary{border-color:var(--line)}
 .modal-btn .ico{font-size:12px}
 
@@ -431,6 +432,9 @@ const APP_NAME = '360';
 const REROLL_PRICE = 0;
 const MAX_REROLLS_PER_DAY = 3;
 
+/* ============================================================
+   ФОНОВЫЕ СИМВОЛЫ
+   ============================================================ */
 (function initBgSymbols(){
   const container=document.getElementById('bgSymbols');
   const glyphs=['✦','✧','!','!','!','★','✶','!','·','✴','!','!'];
@@ -588,9 +592,7 @@ const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD, adult:TASKS_ADULT};
    ХРАНИЛИЩЕ (VK Storage + localStorage fallback)
    ============================================================ */
 function vkStorageSet(key, value){
-  // Локальный кэш
   try{ localStorage.setItem('g_'+key, value); }catch(e){}
-  // Основное хранилище — VK
   if(vkBridge){
     return vkBridge.send('VKWebAppStorageSet',{key,value}).catch(()=>{});
   }
@@ -662,7 +664,6 @@ async function loadProgress(){
     }
   });
 
-  // Сбрасываем и заполняем заново
   usedToday.normal.clear();
   usedToday.hard.clear();
   usedToday.adult.clear();
@@ -1015,6 +1016,9 @@ tabsEl.addEventListener('click',(e)=>{
   }
 });
 
+/* ============================================================
+   ГЕНЕРАЦИЯ КАРТИНКИ ДЛЯ ПОДЕЛИТЬСЯ
+   ============================================================ */
 function renderShareCard(){
   const cv=shareCanvas;
   const ctx=cv.getContext('2d');
@@ -1145,45 +1149,83 @@ shareModal.addEventListener('click',(e)=>{
 });
 
 /* ============================================================
-   СОХРАНЕНИЕ КАРТИНКИ — работает на Android через VK Bridge
+   СОХРАНЕНИЕ КАРТИНКИ — работает на Android/iOS
    ============================================================ */
-shareSaveBtn.addEventListener('click', () => {
+shareSaveBtn.addEventListener('click', async () => {
   try {
-    const dataUrl = shareCanvas.toDataURL('image/png');
+    shareSaveBtn.disabled = true;
+
+    // Получаем PNG как Blob
+    const blob = await new Promise((resolve, reject) => {
+      try {
+        shareCanvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob null')), 'image/png');
+      } catch (e) { reject(e); }
+    });
+
+    const filename = '360_challenge.png';
+    const file = new File([blob], filename, { type: 'image/png' });
+
+    // 1) Нативный системный диалог (Android/iOS)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: '360 — задание дня',
+          text: 'Брось мне вызов!'
+        });
+        if (navigator.vibrate) navigator.vibrate(15);
+        setTimeout(closeShareModal, 400);
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') {
+          shareSaveBtn.disabled = false;
+          return;
+        }
+        console.warn('[Save] navigator.share failed:', e);
+      }
+    }
+
+    // 2) Fallback: VK Bridge с blob: URL
+    const blobUrl = URL.createObjectURL(blob);
 
     if (vkBridge) {
-      // Нативный способ для Android/iOS — сохраняет в галерею
-      vkBridge.send('VKWebAppDownloadFile', {
-        url: dataUrl,
-        filename: '360_challenge.png'
-      })
-        .then(() => {
-          vkBridge.send('VKWebAppTapticImpactOccurred', { style: 'light' }).catch(() => {});
-          setTimeout(closeShareModal, 400);
-        })
-        .catch((err) => {
-          console.warn('[Save] VKWebAppDownloadFile failed, fallback:', err);
-          // Fallback на браузерное скачивание (веб-версия)
-          fallbackDownload(dataUrl);
-          setTimeout(closeShareModal, 400);
+      try {
+        await vkBridge.send('VKWebAppDownloadFile', {
+          url: blobUrl,
+          filename: filename
         });
-    } else {
-      fallbackDownload(dataUrl);
-      setTimeout(closeShareModal, 400);
+        URL.revokeObjectURL(blobUrl);
+        vkBridge.send('VKWebAppTapticImpactOccurred', { style: 'light' }).catch(() => {});
+        setTimeout(closeShareModal, 400);
+        return;
+      } catch (e) {
+        console.warn('[Save] VKWebAppDownloadFile failed:', e);
+        URL.revokeObjectURL(blobUrl);
+      }
     }
+
+    // 3) Последний fallback — браузерное скачивание
+    fallbackDownload(blob);
+
+    setTimeout(closeShareModal, 400);
   } catch (err) {
-    console.warn('[Save]', err);
+    console.warn('[Save] fatal:', err);
+  } finally {
+    shareSaveBtn.disabled = false;
   }
 });
 
-function fallbackDownload(dataUrl){
+function fallbackDownload(blobOrUrl){
   try{
+    const url = (blobOrUrl instanceof Blob) ? URL.createObjectURL(blobOrUrl) : blobOrUrl;
     const a = document.createElement('a');
-    a.href = dataUrl;
+    a.href = url;
     a.download = '360_challenge.png';
+    a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    if (url.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(url), 5000);
     if (navigator.vibrate) navigator.vibrate(15);
   }catch(e){
     console.warn('[Save fallback]', e);
@@ -1197,7 +1239,6 @@ function startApp(){
   loadProgress().then(() => {
     switchCategory('normal');
   }).catch(() => {
-    // Если VK Storage совсем недоступен — работаем на localStorage
     switchCategory('normal');
   });
 }
