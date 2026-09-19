@@ -311,22 +311,6 @@ body::before{
 }
 .modal-close:active{border-color:var(--accent)}
 
-/* ===== PLACEHOLDER БАННЕР (для локальной проверки) ===== */
-#bannerTest{
-  position:fixed;bottom:0;left:0;right:0;
-  height:80px;
-  background:linear-gradient(90deg,#2a1f3d,#4a2f5d);
-  color:#fff;
-  font-family:'Unbounded',sans-serif;
-  font-size:11px;
-  display:none;
-  align-items:center;justify-content:center;
-  z-index:99;
-  letter-spacing:.1em;text-transform:uppercase;
-  border-top:1px solid rgba(255,205,150,.3);
-}
-#bannerTest.show{display:flex}
-
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
@@ -439,10 +423,6 @@ body::before{
   </div>
 </div>
 
-<!-- PLACEHOLDER БАННЕР (для локальной проверки в браузере) -->
-<!-- УДАЛИ ЭТОТ БЛОК ПЕРЕД ПУБЛИКАЦИЕЙ! -->
-<div id="bannerTest">✦ Здесь будет баннер VK Ads ✦</div>
-
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 
 <script>
@@ -519,65 +499,43 @@ const MAX_REROLLS_PER_DAY = 3;
 const vkBridge = window.vkBridge;
 
 /* ============================================================
-   БАННЕРНАЯ РЕКЛАМА (УЛУЧШЕННАЯ ВЕРСИЯ)
+   БАННЕРНАЯ РЕКЛАМА
    ============================================================ */
 function initBannerAd(){
-  const bannerTest = document.getElementById('bannerTest');
-  
-  // Если VK Bridge недоступен — показываем placeholder для теста
-  if(!vkBridge){
-    document.body.style.setProperty('--ad-banner-height', '80px');
-    if(bannerTest) bannerTest.classList.add('show');
-    console.log('[Banner] VK Bridge недоступен, показан placeholder');
-    return;
-  }
-  
-  // Слушаем события баннера от VK
+  if(!vkBridge) return;
+
   vkBridge.subscribe((event) => {
     if(!event.detail) return;
-    
-    // Баннер получен — ставим реальную высоту
+
     if(event.detail.type === 'VKWebAppBannerAdReceived'){
       const height = (event.detail.data && event.detail.data.banner_height) || 80;
       document.body.style.setProperty('--ad-banner-height', height + 'px');
-      console.log('[Banner] получен, высота:', height);
     }
-    
-    // Баннер скрыт/закрыт — обнуляем отступ
-    if(event.detail.type === 'VKWebAppBannerAdClosed' || 
+
+    if(event.detail.type === 'VKWebAppBannerAdClosed' ||
        event.detail.type === 'VKWebAppBannerAdHidden'){
       document.body.style.setProperty('--ad-banner-height', '0px');
-      console.log('[Banner] закрыт');
     }
   });
-  
-  // Проверяем доступность баннерной рекламы
+
   vkBridge.send('VKWebAppCheckBannerAd')
     .then(r => {
       if(r && r.result){
-        console.log('[Banner] реклама доступна, показываем...');
         return vkBridge.send('VKWebAppShowBannerAd', {
           banner_location: 'bottom'
         });
-      }else{
-        console.log('[Banner] реклама недоступна');
-        return Promise.reject('banner_not_available');
       }
+      return Promise.reject('banner_not_available');
     })
-    .then(res => {
-      if(res && res.result){
-        console.log('[Banner] показан успешно');
-      }
-    })
-    .catch(err => {
-      console.warn('[Banner] не удалось показать:', err);
-    });
+    .catch(() => {});
 }
 
+/* ============================================================
+   VK BRIDGE INIT
+   ============================================================ */
 function initVKBridge(){
   if(!vkBridge){
     console.warn('[VK Bridge] не загружен');
-    initBannerAd(); // всё равно вызываем для показа placeholder
     return;
   }
   try{
@@ -590,12 +548,20 @@ function initVKBridge(){
       navigation_bar_color:'#0f0f12'
     }).catch(()=>{});
     vkBridge.send('VKWebAppEnableSwipeBack').catch(()=>{});
-    
+
+    // Синхронизация прогресса при возврате в приложение
+    vkBridge.subscribe((event) => {
+      if(event.detail && event.detail.type === 'VKWebAppViewRestore'){
+        console.log('[Sync] VKWebAppViewRestore — перезагрузка прогресса');
+        loadProgress().then(() => {
+          switchCategory(currentCategory);
+        });
+      }
+    });
+
     initBannerAd();
   }catch(err){console.warn('[VK Bridge]',err)}
 }
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initVKBridge);
-else initVKBridge();
 
 const TASKS_NORMAL=[
 'Покорми голубя','Сегодня ходи во всем белом','Предложи незнакомому человеку в соц.сети тортика','Картавь весь день','Купи шоколадку и подари любому человку',
@@ -618,30 +584,28 @@ const TASKS_ADULT=[
 ];
 const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD, adult:TASKS_ADULT};
 
-function vkStorageSet(key,value){
-  try{ localStorage.setItem('g_'+key,value); }catch(e){}
-  if(vkBridge) return vkBridge.send('VKWebAppStorageSet',{key,value}).catch(()=>{});
+/* ============================================================
+   ХРАНИЛИЩЕ (VK Storage + localStorage fallback)
+   ============================================================ */
+function vkStorageSet(key, value){
+  // Локальный кэш
+  try{ localStorage.setItem('g_'+key, value); }catch(e){}
+  // Основное хранилище — VK
+  if(vkBridge){
+    return vkBridge.send('VKWebAppStorageSet',{key,value}).catch(()=>{});
+  }
   return Promise.resolve();
 }
-function vkStorageGet(keys){
-  const fallback=()=>{
-    const out={};
-    keys.forEach(k=>{ try{ out[k]=localStorage.getItem('g_'+k)||''; }catch(e){ out[k]=''; } });
-    return out;
-  };
-  if(vkBridge){
-    return vkBridge.send('VKWebAppStorageGet',{keys}).then(r=>{
-      const out={};
-      (r.keys||[]).forEach(k=>{ out[k.key]=k.value; });
-      keys.forEach(k=>{ if(!(k in out) || out[k]==='') out[k]=fallback()[k]; });
-      return out;
-    }).catch(fallback);
-  }
-  return Promise.resolve(fallback());
-}
 
-function dateKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function seededIndex(seed,len){let h=2166136261>>>0;for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0)%len;}
+function dateKey(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function seededIndex(seed,len){
+  let h=2166136261>>>0;
+  for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}
+  return(h>>>0)%len;
+}
 
 const taskEl=document.getElementById('task');
 const taskWrap=document.getElementById('taskWrap');
@@ -666,47 +630,103 @@ const usedToday={normal:new Set(), hard:new Set(), adult:new Set()};
 
 let rerollsToday = 0;
 
-function loadUsedToday(){
-  try{
-    const raw=localStorage.getItem('used_'+dateKey());
-    if(raw){
-      const data=JSON.parse(raw);
-      if(data.normal) data.normal.forEach(i=>usedToday.normal.add(i));
-      if(data.hard) data.hard.forEach(i=>usedToday.hard.add(i));
-      if(data.adult) data.adult.forEach(i=>usedToday.adult.add(i));
+/* ============================================================
+   ЗАГРУЗКА ПРОГРЕССА — приоритет VK Storage
+   ============================================================ */
+async function loadProgress(){
+  const keys = [
+    'used_' + dateKey(),
+    'rerolls_' + dateKey(),
+    'unlock_hard_' + dateKey(),
+    'unlock_adult_' + dateKey(),
+    'full_access_purchase_date'
+  ];
+
+  let data = {};
+
+  if(vkBridge){
+    try{
+      const r = await vkBridge.send('VKWebAppStorageGet', { keys });
+      (r && r.keys || []).forEach(k => { data[k.key] = k.value; });
+    }catch(e){
+      console.warn('[Storage] VK Storage недоступен:', e);
     }
-  }catch(e){}
-}
-function saveUsedToday(){
+  }
+
+  // Дополняем из localStorage, если чего-то нет в VK Storage
+  keys.forEach(k => {
+    if(!data[k]){
+      try{
+        data[k] = localStorage.getItem('g_'+k) || localStorage.getItem(k) || '';
+      }catch(e){ data[k] = ''; }
+    }
+  });
+
+  // Сбрасываем и заполняем заново
+  usedToday.normal.clear();
+  usedToday.hard.clear();
+  usedToday.adult.clear();
+
   try{
-    const data={
-      normal:[...usedToday.normal],
-      hard:[...usedToday.hard],
-      adult:[...usedToday.adult]
-    };
-    localStorage.setItem('used_'+dateKey(),JSON.stringify(data));
-  }catch(e){}
+    const rawUsed = data['used_' + dateKey()];
+    if(rawUsed){
+      const parsed = JSON.parse(rawUsed);
+      if(parsed.normal) parsed.normal.forEach(i => usedToday.normal.add(i));
+      if(parsed.hard) parsed.hard.forEach(i => usedToday.hard.add(i));
+      if(parsed.adult) parsed.adult.forEach(i => usedToday.adult.add(i));
+    }
+  }catch(e){ console.warn('[Storage] used parse error', e); }
+
+  const rawRerolls = data['rerolls_' + dateKey()];
+  rerollsToday = rawRerolls ? parseInt(rawRerolls, 10) : 0;
+  if(isNaN(rerollsToday)) rerollsToday = 0;
+
+  unlocked.hard = data['unlock_hard_' + dateKey()] === '1';
+  unlocked.adult = data['unlock_adult_' + dateKey()] === '1';
+
+  const purchaseDateStr = data['full_access_purchase_date'];
+  if(purchaseDateStr){
+    const diffDays = (Date.now() - new Date(purchaseDateStr).getTime()) / 86400000;
+    fullAccess = diffDays <= 365;
+  } else {
+    fullAccess = false;
+  }
+
+  updateRerollUI();
+  updateLocks();
 }
 
-function loadRerollsToday(){
-  try{
-    const raw=localStorage.getItem('rerolls_'+dateKey());
-    rerollsToday = raw ? parseInt(raw, 10) : 0;
-    if(isNaN(rerollsToday)) rerollsToday = 0;
-  }catch(e){
-    rerollsToday = 0;
+function saveUsedToday(){
+  const data = {
+    normal: [...usedToday.normal],
+    hard:   [...usedToday.hard],
+    adult:  [...usedToday.adult]
+  };
+  const value = JSON.stringify(data);
+  try{ localStorage.setItem('used_'+dateKey(), value); }catch(e){}
+  if(vkBridge){
+    vkBridge.send('VKWebAppStorageSet', {
+      key: 'used_' + dateKey(),
+      value
+    }).catch(()=>{});
   }
 }
+
 function saveRerollsToday(){
-  try{
-    localStorage.setItem('rerolls_'+dateKey(), String(rerollsToday));
-  }catch(e){}
+  const value = String(rerollsToday);
+  try{ localStorage.setItem('rerolls_'+dateKey(), value); }catch(e){}
+  if(vkBridge){
+    vkBridge.send('VKWebAppStorageSet', {
+      key: 'rerolls_' + dateKey(),
+      value
+    }).catch(()=>{});
+  }
 }
 
 function updateRerollUI(){
   const remaining = Math.max(0, MAX_REROLLS_PER_DAY - rerollsToday);
   if(rerollLbl) rerollLbl.textContent = `${remaining}/${MAX_REROLLS_PER_DAY}`;
-  
+
   if(remaining <= 0){
     rerollBtn.classList.add('disabled');
   }else{
@@ -931,18 +951,18 @@ function doReroll(){
           fail();
           return Promise.reject();
         }
-        
+
         const adPromise = vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'})
           .then(res=>{
             if(res && res.result) return 'success';
             return 'closed';
           })
           .catch(()=> 'error');
-        
+
         const timerPromise = new Promise(resolve => {
           setTimeout(()=> resolve('timeout'), 5000);
         });
-        
+
         return Promise.race([adPromise, timerPromise]);
       })
       .then(result=>{
@@ -1124,42 +1144,73 @@ shareModal.addEventListener('click',(e)=>{
   if(e.target===shareModal) closeShareModal();
 });
 
-shareSaveBtn.addEventListener('click',()=>{
-  try{
+/* ============================================================
+   СОХРАНЕНИЕ КАРТИНКИ — работает на Android через VK Bridge
+   ============================================================ */
+shareSaveBtn.addEventListener('click', () => {
+  try {
     const dataUrl = shareCanvas.toDataURL('image/png');
-    const a=document.createElement('a');
-    a.href=dataUrl;
-    a.download='360_challenge.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
 
-    if(vkBridge) vkBridge.send('VKWebAppTapticImpactOccurred',{style:'light'}).catch(()=>{});
-    else if(navigator.vibrate) navigator.vibrate(15);
-
-    setTimeout(closeShareModal, 400);
-  }catch(err){
-    console.warn('[Save]',err);
+    if (vkBridge) {
+      // Нативный способ для Android/iOS — сохраняет в галерею
+      vkBridge.send('VKWebAppDownloadFile', {
+        url: dataUrl,
+        filename: '360_challenge.png'
+      })
+        .then(() => {
+          vkBridge.send('VKWebAppTapticImpactOccurred', { style: 'light' }).catch(() => {});
+          setTimeout(closeShareModal, 400);
+        })
+        .catch((err) => {
+          console.warn('[Save] VKWebAppDownloadFile failed, fallback:', err);
+          // Fallback на браузерное скачивание (веб-версия)
+          fallbackDownload(dataUrl);
+          setTimeout(closeShareModal, 400);
+        });
+    } else {
+      fallbackDownload(dataUrl);
+      setTimeout(closeShareModal, 400);
+    }
+  } catch (err) {
+    console.warn('[Save]', err);
   }
 });
 
-loadUsedToday();
-loadRerollsToday();
-updateRerollUI();
-switchCategory('normal');
+function fallbackDownload(dataUrl){
+  try{
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = '360_challenge.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    if (navigator.vibrate) navigator.vibrate(15);
+  }catch(e){
+    console.warn('[Save fallback]', e);
+  }
+}
 
-vkStorageGet(['unlock_hard_'+dateKey(),'unlock_adult_'+dateKey(),'full_access_purchase_date'])
-  .then(vals=>{
-    unlocked.hard = vals['unlock_hard_'+dateKey()]==='1';
-    unlocked.adult = vals['unlock_adult_'+dateKey()]==='1';
-    const purchaseDateStr = vals['full_access_purchase_date'];
-    if(purchaseDateStr){
-      const diffDays=(Date.now()-new Date(purchaseDateStr).getTime())/86400000;
-      fullAccess = diffDays<=365;
-    }
-    updateLocks();
-  })
-  .catch(()=>{});
+/* ============================================================
+   СТАРТ ПРИЛОЖЕНИЯ
+   ============================================================ */
+function startApp(){
+  loadProgress().then(() => {
+    switchCategory('normal');
+  }).catch(() => {
+    // Если VK Storage совсем недоступен — работаем на localStorage
+    switchCategory('normal');
+  });
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', () => {
+    initVKBridge();
+    startApp();
+  });
+} else {
+  initVKBridge();
+  startApp();
+}
 </script>
 </body>
 </html>
