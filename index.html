@@ -17,16 +17,15 @@
   --accent-soft:rgba(255,205,150,.25);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
-html,body{height:100%;overflow:hidden}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 body{
   background:var(--bg);color:var(--ink);
   font-family:'Unbounded',system-ui,sans-serif;
   display:flex;align-items:center;justify-content:center;
   padding:14px;
   padding-top:calc(14px + env(safe-area-inset-top));
-  padding-bottom:calc(14px + env(safe-area-inset-bottom) + var(--ad-banner-height, 0px));
+  padding-bottom:calc(14px + env(safe-area-inset-bottom));
   text-align:center;position:relative;
-  transition:padding-bottom .3s ease;
 }
 body::before{
   content:"";position:absolute;inset:0;pointer-events:none;
@@ -220,6 +219,18 @@ body::before{
 .footer .mini.l{left:-1.25px;top:50%;transform:translate(-50%,-50%) rotate(45deg)}
 .footer .mini.r{right:-1.25px;top:50%;transform:translate(50%,-50%) rotate(45deg)}
 
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translate(-50%,16px);
+  background:rgba(20,20,24,.96);
+  border:1px solid var(--line);
+  color:var(--ink);font-size:11px;padding:10px 16px;
+  font-family:'Unbounded',sans-serif;letter-spacing:.04em;
+  opacity:0;transition:opacity .3s, transform .3s;z-index:100;
+  max-width:min(300px,80vw);text-align:center;pointer-events:none;
+  line-height:1.5;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
@@ -275,7 +286,7 @@ body::before{
     </button>
     <button class="tab" data-cat="adult">
       <span class="co tl"></span><span class="co tr"></span><span class="co bl"></span><span class="co br"></span>
-      <span>Пары 18+</span>
+      <span>Для пар</span>
     </button>
   </div>
 
@@ -302,12 +313,16 @@ body::before{
 
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 
 <script>
 const APP_URL = 'https://vk.ru/app54747359';
 const APP_NAME = '360';
 const MAX_REROLLS_PER_DAY = 3;
+const AD_COOLDOWN_MS = 30000;
+const UNLOCK_VALIDITY_MS = 24 * 60 * 60 * 1000;
 
 /* ============================================================
    ФОНОВЫЕ СИМВОЛЫ
@@ -380,35 +395,27 @@ const MAX_REROLLS_PER_DAY = 3;
 const vkBridge = window.vkBridge;
 
 /* ============================================================
-   БАННЕРНАЯ РЕКЛАМА
+   TOAST
    ============================================================ */
-function initBannerAd(){
-  if(!vkBridge) return;
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  if(!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
 
-  vkBridge.subscribe((event) => {
-    if(!event.detail) return;
-
-    if(event.detail.type === 'VKWebAppBannerAdReceived'){
-      const height = (event.detail.data && event.detail.data.banner_height) || 80;
-      document.body.style.setProperty('--ad-banner-height', height + 'px');
-    }
-
-    if(event.detail.type === 'VKWebAppBannerAdClosed' ||
-       event.detail.type === 'VKWebAppBannerAdHidden'){
-      document.body.style.setProperty('--ad-banner-height', '0px');
-    }
-  });
-
-  vkBridge.send('VKWebAppCheckBannerAd')
-    .then(r => {
-      if(r && r.result){
-        return vkBridge.send('VKWebAppShowBannerAd', {
-          banner_location: 'bottom'
-        });
-      }
-      return Promise.reject('banner_not_available');
-    })
-    .catch(() => {});
+/* ============================================================
+   HAPTIC
+   ============================================================ */
+function haptic(style){
+  if(vkBridge){
+    vkBridge.send('VKWebAppTapticImpactOccurred',{style:style||'light'}).catch(()=>{});
+  } else if(navigator.vibrate){
+    navigator.vibrate(style === 'medium' ? 20 : 10);
+  }
 }
 
 /* ============================================================
@@ -429,21 +436,12 @@ function initVKBridge(){
       navigation_bar_color:'#0f0f12'
     }).catch(()=>{});
     vkBridge.send('VKWebAppEnableSwipeBack').catch(()=>{});
-
-    // Перезагрузка прогресса при возврате в приложение
-    vkBridge.subscribe((event) => {
-      if(event.detail && event.detail.type === 'VKWebAppViewRestore'){
-        console.log('[Sync] VKWebAppViewRestore — перезагрузка прогресса');
-        loadProgress().then(() => {
-          switchCategory(currentCategory);
-        });
-      }
-    });
-
-    initBannerAd();
   }catch(err){console.warn('[VK Bridge]',err)}
 }
 
+/* ============================================================
+   ЗАДАЧИ
+   ============================================================ */
 const TASKS_NORMAL=[
 'Покорми голубя','Сегодня ходи во всем белом','Предложи незнакомому человеку в соц.сети тортика','Картавь весь день','Купи шоколадку и подари любому человку',
 'Обнови аватар в соц. сети на капибару ','Посети зоомогазин','Выучи пару фраз на языке жестов','Одень разные носки','Напиши спасибо трем людям за то, что они существуют',
@@ -466,14 +464,41 @@ const TASKS_ADULT=[
 const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD, adult:TASKS_ADULT};
 
 /* ============================================================
-   ХРАНИЛИЩЕ (VK Storage + localStorage fallback)
+   ХРАНИЛИЩЕ — атомарные операции с retry
    ============================================================ */
-function vkStorageSet(key, value){
-  try{ localStorage.setItem('g_'+key, value); }catch(e){}
+function storageSet(key, value){
+  try{ localStorage.setItem('g_'+key, value); }catch(e){ console.warn('[LS] set failed', key, e); }
   if(vkBridge){
-    return vkBridge.send('VKWebAppStorageSet',{key,value}).catch(()=>{});
+    return vkBridge.send('VKWebAppStorageSet',{key,value})
+      .catch(err => {
+        console.warn('[VK Storage] set failed', key, err);
+        return vkBridge.send('VKWebAppStorageSet',{key,value})
+          .catch(e2 => console.error('[VK Storage] retry failed', key, e2));
+      });
   }
   return Promise.resolve();
+}
+
+async function storageGetMultiple(keys){
+  const result = {};
+  if(vkBridge){
+    try{
+      const r = await vkBridge.send('VKWebAppStorageGet', { keys });
+      (r && r.keys || []).forEach(k => { result[k.key] = k.value; });
+    }catch(e){
+      console.warn('[VK Storage] get failed', e);
+    }
+  }
+  keys.forEach(k => {
+    if(result[k] === undefined || result[k] === '' || result[k] === null){
+      try{
+        const ls = localStorage.getItem('g_'+k);
+        if(ls !== null && ls !== undefined) result[k] = ls;
+        else result[k] = localStorage.getItem(k) || '';
+      }catch(e){ result[k] = ''; }
+    }
+  });
+  return result;
 }
 
 function dateKey(){
@@ -493,17 +518,18 @@ const tabsEl=document.getElementById('tabs');
 const rerollBtn=document.getElementById('rerollBtn');
 const rerollLbl=document.getElementById('rerollLbl');
 
+let appReady=false;
 let currentCategory='normal';
-let unlocked={hard:false, adult:false};
+let unlocked={hard:0, adult:0}; // timestamps
 let fullAccess=false;
 let filmEl=null;
+let lastRenderedDay=dateKey();
+let lastAdShownAt=0;
 
 let currentTaskIndex=-1;
 const usedToday={normal:new Set(), hard:new Set(), adult:new Set()};
-
 let rerollsToday = 0;
 
-/* Ежедневное состояние: задача + открыта ли плёнка, синхронизируется */
 const dailyState = {
   normal: { idx: -1, revealed: false },
   hard:   { idx: -1, revealed: false },
@@ -512,48 +538,49 @@ const dailyState = {
 
 function stateKey(){ return 'state_' + dateKey(); }
 
+/* ============================================================
+   ЕЖЕДНЕВНОЕ СОСТОЯНИЕ — сохраняем вместе с usedToday
+   ============================================================ */
 function saveDailyState(){
-  const value = JSON.stringify(dailyState);
-  try{ localStorage.setItem('g_'+stateKey(), value); }catch(e){}
-  if(vkBridge){
-    vkBridge.send('VKWebAppStorageSet', {
-      key: stateKey(),
-      value
-    }).catch(()=>{});
-  }
+  const obj = {};
+  ['normal','hard','adult'].forEach(cat => {
+    obj[cat] = {
+      idx: dailyState[cat].idx,
+      revealed: dailyState[cat].revealed,
+      used: [...usedToday[cat]]
+    };
+  });
+  storageSet(stateKey(), JSON.stringify(obj));
+}
+
+function saveRerollsToday(){
+  storageSet('rerolls_' + dateKey(), String(rerollsToday));
 }
 
 /* ============================================================
-   ЗАГРУЗКА ПРОГРЕССА — приоритет VK Storage
+   ПРОВЕРКА РАЗБЛОКИРОВКИ (24 часа от момента)
+   ============================================================ */
+function isUnlocked(cat){
+  if(cat === 'normal') return true;
+  if(fullAccess) return true;
+  const ts = unlocked[cat];
+  if(!ts || typeof ts !== 'number' || isNaN(ts)) return false;
+  return (Date.now() - ts) < UNLOCK_VALIDITY_MS;
+}
+
+/* ============================================================
+   ЗАГРУЗКА ПРОГРЕССА — VK Storage в приоритете
    ============================================================ */
 async function loadProgress(){
   const keys = [
     stateKey(),
     'rerolls_' + dateKey(),
-    'unlock_hard_' + dateKey(),
-    'unlock_adult_' + dateKey(),
+    'unlock_hard',
+    'unlock_adult',
     'full_access_purchase_date'
   ];
 
-  let data = {};
-
-  if(vkBridge){
-    try{
-      const r = await vkBridge.send('VKWebAppStorageGet', { keys });
-      (r && r.keys || []).forEach(k => { data[k.key] = k.value; });
-    }catch(e){
-      console.warn('[Storage] VK Storage недоступен:', e);
-    }
-  }
-
-  // Дополняем из localStorage, если чего-то нет в VK Storage
-  keys.forEach(k => {
-    if(!data[k]){
-      try{
-        data[k] = localStorage.getItem('g_'+k) || localStorage.getItem(k) || '';
-      }catch(e){ data[k] = ''; }
-    }
-  });
+  const data = await storageGetMultiple(keys);
 
   // Состояние задач
   ['normal','hard','adult'].forEach(cat => {
@@ -574,6 +601,11 @@ async function loadProgress(){
           if(dailyState[cat].idx >= 0){
             usedToday[cat].add(dailyState[cat].idx);
           }
+          if(Array.isArray(parsed[cat].used)){
+            parsed[cat].used.forEach(i => {
+              if(typeof i === 'number') usedToday[cat].add(i);
+            });
+          }
         }
       });
     }
@@ -581,34 +613,35 @@ async function loadProgress(){
 
   const rawRerolls = data['rerolls_' + dateKey()];
   rerollsToday = rawRerolls ? parseInt(rawRerolls, 10) : 0;
-  if(isNaN(rerollsToday)) rerollsToday = 0;
+  if(isNaN(rerollsToday) || rerollsToday < 0) rerollsToday = 0;
+  if(rerollsToday > MAX_REROLLS_PER_DAY) rerollsToday = MAX_REROLLS_PER_DAY;
 
-  unlocked.hard = data['unlock_hard_' + dateKey()] === '1';
-  unlocked.adult = data['unlock_adult_' + dateKey()] === '1';
+  // Разблокировки — timestamp + 24h
+  const tsHard = parseInt(data['unlock_hard'], 10);
+  const tsAdult = parseInt(data['unlock_adult'], 10);
+  unlocked.hard = (!isNaN(tsHard) && tsHard > 0) ? tsHard : 0;
+  unlocked.adult = (!isNaN(tsAdult) && tsAdult > 0) ? tsAdult : 0;
 
+  // Полный доступ — валидация
   const purchaseDateStr = data['full_access_purchase_date'];
+  fullAccess = false;
   if(purchaseDateStr){
-    const diffDays = (Date.now() - new Date(purchaseDateStr).getTime()) / 86400000;
-    fullAccess = diffDays <= 365;
-  } else {
-    fullAccess = false;
+    const ts = new Date(purchaseDateStr).getTime();
+    if(!isNaN(ts) && ts > 0 && ts <= Date.now()){
+      const diffDays = (Date.now() - ts) / 86400000;
+      fullAccess = diffDays <= 365;
+    } else {
+      console.warn('[FullAccess] invalid purchase date:', purchaseDateStr);
+    }
   }
 
   updateRerollUI();
   updateLocks();
 }
 
-function saveRerollsToday(){
-  const value = String(rerollsToday);
-  try{ localStorage.setItem('rerolls_'+dateKey(), value); }catch(e){}
-  if(vkBridge){
-    vkBridge.send('VKWebAppStorageSet', {
-      key: 'rerolls_' + dateKey(),
-      value
-    }).catch(()=>{});
-  }
-}
-
+/* ============================================================
+   UI: reroll counter
+   ============================================================ */
 function updateRerollUI(){
   const remaining = Math.max(0, MAX_REROLLS_PER_DAY - rerollsToday);
   if(rerollLbl) rerollLbl.textContent = `${remaining}/${MAX_REROLLS_PER_DAY}`;
@@ -620,6 +653,17 @@ function updateRerollUI(){
   }
 }
 
+function updateLocks(){
+  [...tabsEl.querySelectorAll('.tab')].forEach(btn=>{
+    const cat=btn.dataset.cat;
+    if(cat==='normal'){ btn.classList.remove('locked'); return; }
+    btn.classList.toggle('locked', !isUnlocked(cat));
+  });
+}
+
+/* ============================================================
+   ВЫБОР ЗАДАЧИ
+   ============================================================ */
 function pickTaskIndex(cat, excludeIndex=-1){
   const list=CATEGORY_TASKS[cat];
   const used=usedToday[cat];
@@ -643,8 +687,10 @@ function pickTaskIndex(cat, excludeIndex=-1){
   return idx;
 }
 
+/* ============================================================
+   ПЛЁНКА
+   ============================================================ */
 function buildFilm(){
-  // Если плёнка уже открыта сегодня — не создаём её, задача сразу видна
   if(dailyState[currentCategory].revealed){
     if(filmEl && filmEl.parentNode) filmEl.remove();
     filmEl = null;
@@ -699,6 +745,7 @@ function initFilmInteraction(film, canvas){
   drawFilmBase(ctx,rect.width,rect.height);
 
   let drawing=false,lastX=null,lastY=null,revealed=false,checkScheduled=false;
+  let checkFrame=0;
   const RADIUS=26,SOFT_RADIUS=34,REVEAL_THRESHOLD=0.80;
 
   function pos(e){const r=film.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
@@ -723,13 +770,19 @@ function initFilmInteraction(film, canvas){
   function computePercent(){
     const w=canvas.width,h=canvas.height;
     const data=ctx.getImageData(0,0,w,h).data;
-    let transparent=0,total=0;const step=32*4;
+    let transparent=0,total=0;
+    const step=48*4;
     for(let i=3;i<data.length;i+=step){total++;if(data[i]===0) transparent++;}
     return total>0 ? transparent/total : 0;
   }
   function scheduleCheck(){
-    if(checkScheduled) return;checkScheduled=true;
-    requestAnimationFrame(()=>{checkScheduled=false;checkReveal()});
+    if(checkScheduled) return;
+    checkScheduled=true;
+    requestAnimationFrame(()=>{
+      checkScheduled=false;
+      checkFrame++;
+      if(checkFrame % 3 === 0) checkReveal();
+    });
   }
   function checkReveal(){
     if(revealed)return;
@@ -747,12 +800,10 @@ function initFilmInteraction(film, canvas){
       progressEl.textContent='✓';progressEl.classList.add('show');
       film.classList.remove('hint','partial');film.classList.add('revealing');
 
-      // === СОХРАНЯЕМ: плёнка открыта — синхронизируем на все устройства ===
       dailyState[currentCategory].revealed = true;
       saveDailyState();
 
-      if(vkBridge) vkBridge.send('VKWebAppTapticImpactOccurred',{style:'medium'}).catch(()=>{});
-      else if(navigator.vibrate) navigator.vibrate(20);
+      haptic('medium');
       setTimeout(()=>{
         if(film.parentNode) film.remove();
         filmEl = null;
@@ -772,7 +823,7 @@ function initFilmInteraction(film, canvas){
   film.addEventListener('pointermove',move);
   film.addEventListener('pointerup',end);
   film.addEventListener('pointercancel',end);
-  film.addEventListener('pointerleave',e=>{if(drawing) end()});
+  film.addEventListener('pointerleave',()=>{if(drawing) end()});
 
   let resizeTimer;
   window.addEventListener('resize',()=>{
@@ -788,6 +839,9 @@ function initFilmInteraction(film, canvas){
   });
 }
 
+/* ============================================================
+   ПЕРЕКЛЮЧЕНИЕ КАТЕГОРИИ
+   ============================================================ */
 function switchCategory(cat, forceNew=false){
   currentCategory=cat;
   [...tabsEl.querySelectorAll('.tab')].forEach(btn=>{
@@ -796,14 +850,12 @@ function switchCategory(cat, forceNew=false){
   const list=CATEGORY_TASKS[cat];
 
   if(forceNew){
-    // Реролл — новая задача, плёнка закрыта заново
     currentTaskIndex = pickTaskIndex(cat, currentTaskIndex);
     dailyState[cat].idx = currentTaskIndex;
     dailyState[cat].revealed = false;
     saveDailyState();
   } else {
     if(dailyState[cat].idx < 0){
-      // Первый заход сегодня — детерминированно берём задачу дня
       currentTaskIndex = seededIndex(dateKey()+':'+cat, list.length);
       dailyState[cat].idx = currentTaskIndex;
       usedToday[cat].add(currentTaskIndex);
@@ -818,129 +870,186 @@ function switchCategory(cat, forceNew=false){
   buildFilm();
 }
 
-function updateLocks(){
-  [...tabsEl.querySelectorAll('.tab')].forEach(btn=>{
-    const cat=btn.dataset.cat;
-    if(cat==='normal'){ btn.classList.remove('locked'); return; }
-    const isOpen = fullAccess || unlocked[cat];
-    btn.classList.toggle('locked', !isOpen);
+/* ============================================================
+   РЕКЛАМА — единый механизм
+   ============================================================ */
+function showRewardedAd(){
+  // Возвращает: 'success' | 'closed' | 'error' | 'no_ads' | 'cooldown'
+  return new Promise(resolve => {
+    if(Date.now() - lastAdShownAt < AD_COOLDOWN_MS){
+      return resolve('cooldown');
+    }
+    if(!vkBridge){
+      const ok = confirm('Показать рекламу (эмуляция)?');
+      if(ok){ lastAdShownAt = Date.now(); return resolve('success'); }
+      return resolve('closed');
+    }
+    vkBridge.send('VKWebAppCheckNativeAds',{ad_format:'reward'})
+      .then(r => {
+        if(!r || !r.result) return resolve('no_ads');
+        lastAdShownAt = Date.now();
+        vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'})
+          .then(res => {
+            if(res && res.result) resolve('success');
+            else resolve('closed');
+          })
+          .catch(err => {
+            console.warn('[Ads] show error', err);
+            resolve('error');
+          });
+      })
+      .catch(err => {
+        console.warn('[Ads] check error', err);
+        resolve('error');
+      });
   });
 }
 
+function adResultMessage(res){
+  switch(res){
+    case 'closed':   return 'Реклама закрыта — попытка не списана';
+    case 'no_ads':   return 'Реклама сейчас недоступна';
+    case 'cooldown': return 'Подождите немного перед следующей рекламой';
+    case 'error':    return 'Не удалось загрузить рекламу';
+    default:         return '';
+  }
+}
+
+/* ============================================================
+   РЕРОЛЛ
+   ============================================================ */
 function doReroll(){
+  if(!appReady) return;
   if(rerollBtn.classList.contains('loading') || rerollBtn.classList.contains('disabled')) return;
   if(rerollsToday >= MAX_REROLLS_PER_DAY) return;
 
-  if(currentCategory!=='normal' && !fullAccess && !unlocked[currentCategory]){
+  if(currentCategory!=='normal' && !isUnlocked(currentCategory)){
     requestUnlock(currentCategory);
     return;
   }
 
+  if(!confirm('Посмотреть рекламу и получить другое задание?')) return;
+
   rerollBtn.classList.add('loading');
 
-  const grant=()=>{
-    switchCategory(currentCategory, true);
-    rerollsToday++;
-    saveRerollsToday();
-    updateRerollUI();
-    setTimeout(()=>rerollBtn.classList.remove('loading'), 500);
-    if(vkBridge) vkBridge.send('VKWebAppTapticImpactOccurred',{style:'light'}).catch(()=>{});
-    else if(navigator.vibrate) navigator.vibrate(10);
-  };
-
-  const fail=()=>{
+  showRewardedAd().then(result => {
     rerollBtn.classList.remove('loading');
-  };
-
-  if(vkBridge){
-    vkBridge.send('VKWebAppCheckNativeAds',{ad_format:'reward'})
-      .then(r=>{
-        if(!r || !r.result){
-          fail();
-          return Promise.reject();
-        }
-
-        const adPromise = vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'})
-          .then(res=>{
-            if(res && res.result) return 'success';
-            return 'closed';
-          })
-          .catch(()=> 'error');
-
-        const timerPromise = new Promise(resolve => {
-          setTimeout(()=> resolve('timeout'), 5000);
-        });
-
-        return Promise.race([adPromise, timerPromise]);
-      })
-      .then(result=>{
-        if(result === 'success' || result === 'timeout') {
-          grant();
-        } else {
-          fail();
-        }
-      })
-      .catch(()=>fail());
-  }else{
-    if(confirm('Показать рекламу (эмуляция) и получить другое задание?')) grant();
-    else fail();
-  }
+    if(result === 'success'){
+      switchCategory(currentCategory, true);
+      rerollsToday++;
+      saveRerollsToday();
+      updateRerollUI();
+      haptic('light');
+    } else {
+      const msg = adResultMessage(result);
+      if(msg) showToast(msg);
+    }
+  });
 }
 
 rerollBtn.addEventListener('click', doReroll);
 
+/* ============================================================
+   РАЗБЛОКИРОВКА РАЗДЕЛА
+   ============================================================ */
 function requestUnlock(cat){
-  const grant=()=>{
-    unlocked[cat]=true;
-    vkStorageSet('unlock_'+cat+'_'+dateKey(),'1');
-    updateLocks();
-    switchCategory(cat);
-  };
-  if(vkBridge){
-    vkBridge.send('VKWebAppCheckNativeAds',{ad_format:'reward'})
-      .then(r=>{
-        if(!r || !r.result){
-          return Promise.reject();
-        }
-        return vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'});
-      })
-      .then(res=>{if(res && res.result) grant()})
-      .catch(()=>{});
-  }else{
-    if(confirm('Показ рекламы (эмуляция). Открыть раздел на сегодня?')) grant();
-  }
+  if(!appReady) return;
+  const label = cat === 'hard' ? 'Сложное' : 'Для пар';
+
+  if(!confirm(`Открыть раздел «${label}» на 24 часа за просмотр рекламы?`)) return;
+
+  showRewardedAd().then(result => {
+    if(result === 'success'){
+      const now = Date.now();
+      unlocked[cat] = now;
+      storageSet('unlock_'+cat, String(now));
+      updateLocks();
+      switchCategory(cat);
+      haptic('light');
+    } else {
+      const msg = adResultMessage(result);
+      if(msg) showToast(msg);
+    }
+  });
 }
 
+/* ============================================================
+   ТАБЫ
+   ============================================================ */
 tabsEl.addEventListener('click',(e)=>{
+  if(!appReady) return;
   const btn=e.target.closest('.tab');
   if(!btn) return;
   const cat=btn.dataset.cat;
   if(cat===currentCategory) return;
-  if(cat==='normal' || fullAccess || unlocked[cat]){
+  if(isUnlocked(cat)){
     switchCategory(cat);
+    haptic('light');
   }else{
     requestUnlock(cat);
   }
 });
 
 /* ============================================================
-   СТАРТ ПРИЛОЖЕНИЯ
+   СИНХРОНИЗАЦИЯ ПРИ ВОЗВРАТЕ В ПРИЛОЖЕНИЕ
    ============================================================ */
-function startApp(){
-  loadProgress().then(() => {
-    switchCategory('normal');
-  }).catch(() => {
-    switchCategory('normal');
+function initViewRestoreSync(){
+  if(!vkBridge) return;
+  vkBridge.subscribe((event) => {
+    if(!event.detail || event.detail.type !== 'VKWebAppViewRestore') return;
+
+    const prevDay = lastRenderedDay;
+    const prevIdx = dailyState[currentCategory].idx;
+    const prevRevealed = dailyState[currentCategory].revealed;
+    const prevRerolls = rerollsToday;
+    const prevUnlockedHard = unlocked.hard;
+    const prevUnlockedAdult = unlocked.adult;
+
+    loadProgress().then(() => {
+      const dayChanged = dateKey() !== prevDay;
+      const stateChanged =
+        dailyState[currentCategory].idx !== prevIdx ||
+        dailyState[currentCategory].revealed !== prevRevealed ||
+        rerollsToday !== prevRerolls ||
+        unlocked.hard !== prevUnlockedHard ||
+        unlocked.adult !== prevUnlockedAdult;
+
+      if(dayChanged){
+        lastRenderedDay = dateKey();
+        switchCategory(currentCategory);
+      } else if(
+        dailyState[currentCategory].idx !== prevIdx ||
+        dailyState[currentCategory].revealed !== prevRevealed
+      ){
+        // Задача или состояние плёнки изменилось на другом устройстве — перерисуем
+        switchCategory(currentCategory);
+      } else if(stateChanged){
+        updateRerollUI();
+        updateLocks();
+      }
+    });
   });
 }
 
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded', () => {
-    initVKBridge();
-    startApp();
-  });
-} else {
+/* ============================================================
+   СТАРТ
+   ============================================================ */
+async function startApp(){
   initVKBridge();
+  initViewRestoreSync();
+  try{
+    await loadProgress();
+  }catch(e){
+    console.warn('[Start] loadProgress failed', e);
+  }
+  lastRenderedDay = dateKey();
+  appReady = true;
+  switchCategory('normal');
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
   startApp();
 }
 </script>
