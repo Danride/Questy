@@ -231,6 +231,103 @@ body::before{
 }
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
+/* ============================================================
+   МОДАЛЬНОЕ ОКНО РЕКЛАМЫ
+   ============================================================ */
+.ad-modal{
+  position:fixed;inset:0;z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s ease;
+  padding:20px;
+}
+.ad-modal.show{opacity:1;pointer-events:auto}
+.ad-modal-backdrop{
+  position:absolute;inset:0;
+  background:rgba(5,5,8,.78);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+}
+.ad-modal-card{
+  position:relative;
+  background:#15151a;
+  border:1px solid var(--line);
+  padding:24px 20px 18px;
+  max-width:320px;width:100%;
+  text-align:center;
+  transform:translateY(10px) scale(.98);
+  transition:transform .25s cubic-bezier(.2,1,.3,1);
+}
+.ad-modal.show .ad-modal-card{transform:translateY(0) scale(1)}
+.ad-modal-corner{
+  position:absolute;width:8px;height:8px;border:1px solid var(--accent);
+  pointer-events:none;
+}
+.ad-modal-corner.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.ad-modal-corner.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
+.ad-modal-corner.bl{bottom:-1px;left:-1px;border-right:none;border-top:none}
+.ad-modal-corner.br{bottom:-1px;right:-1px;border-left:none;border-top:none}
+
+.ad-modal-title{
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:14px;
+  font-weight:400;
+}
+.ad-modal-body{
+  font-size:13px;line-height:1.55;
+  color:var(--ink);margin-bottom:20px;
+  font-weight:400;
+  min-height:40px;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:6px;
+}
+.ad-modal-actions{
+  display:flex;flex-direction:column;gap:8px;
+}
+.ad-modal-actions:empty{display:none}
+.modal-btn{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--ink);
+  font-family:'Unbounded',sans-serif;
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  padding:12px 14px;
+  cursor:pointer;
+  transition:background .2s,border-color .2s,color .2s;
+  -webkit-tap-highlight-color:transparent;
+  animation:fadeIn .25s ease;
+}
+.modal-btn:active{background:rgba(255,205,150,.12)}
+.modal-btn.primary{
+  border-color:var(--accent);
+  color:#ffd29a;
+  background:rgba(255,205,150,.06);
+}
+.modal-btn.primary:active{background:rgba(255,205,150,.18)}
+.modal-btn.ghost{
+  color:rgba(245,239,226,.65);
+}
+
+.ad-loading{
+  display:inline-flex;align-items:center;
+  color:rgba(245,239,226,.85);
+  font-size:12px;letter-spacing:.06em;
+}
+.ad-loading .dots{display:inline-flex;margin-left:2px}
+.ad-loading .dots span{
+  animation:dotPulse 1.2s ease-in-out infinite;
+}
+.ad-loading .dots span:nth-child(2){animation-delay:.15s}
+.ad-loading .dots span:nth-child(3){animation-delay:.3s}
+@keyframes dotPulse{
+  0%,60%,100%{opacity:.25}
+  30%{opacity:1}
+}
+.ad-hint{
+  display:block;font-size:10px;letter-spacing:.12em;
+  color:rgba(245,239,226,.5);
+  text-transform:uppercase;
+}
+
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
@@ -313,7 +410,22 @@ body::before{
 
 </div>
 
+<!-- ТОСТ -->
 <div class="toast" id="toast"></div>
+
+<!-- МОДАЛЬНОЕ ОКНО РЕКЛАМЫ -->
+<div class="ad-modal" id="adModal">
+  <div class="ad-modal-backdrop"></div>
+  <div class="ad-modal-card">
+    <div class="ad-modal-corner tl"></div>
+    <div class="ad-modal-corner tr"></div>
+    <div class="ad-modal-corner bl"></div>
+    <div class="ad-modal-corner br"></div>
+    <div class="ad-modal-title" id="adModalTitle">Реклама</div>
+    <div class="ad-modal-body" id="adModalBody"></div>
+    <div class="ad-modal-actions" id="adModalActions"></div>
+  </div>
+</div>
 
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 
@@ -322,6 +434,7 @@ const APP_URL = 'https://vk.ru/app54747359';
 const APP_NAME = '360';
 const MAX_REROLLS_PER_DAY = 3;
 const AD_COOLDOWN_MS = 30000;
+const AD_SKIP_AFTER_MS = 5000;
 const UNLOCK_VALIDITY_MS = 24 * 60 * 60 * 1000;
 
 /* ============================================================
@@ -464,7 +577,7 @@ const TASKS_ADULT=[
 const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD, adult:TASKS_ADULT};
 
 /* ============================================================
-   ХРАНИЛИЩЕ — атомарные операции с retry
+   ХРАНИЛИЩЕ
    ============================================================ */
 function storageSet(key, value){
   try{ localStorage.setItem('g_'+key, value); }catch(e){ console.warn('[LS] set failed', key, e); }
@@ -520,7 +633,7 @@ const rerollLbl=document.getElementById('rerollLbl');
 
 let appReady=false;
 let currentCategory='normal';
-let unlocked={hard:0, adult:0}; // timestamps
+let unlocked={hard:0, adult:0};
 let fullAccess=false;
 let filmEl=null;
 let lastRenderedDay=dateKey();
@@ -538,9 +651,6 @@ const dailyState = {
 
 function stateKey(){ return 'state_' + dateKey(); }
 
-/* ============================================================
-   ЕЖЕДНЕВНОЕ СОСТОЯНИЕ — сохраняем вместе с usedToday
-   ============================================================ */
 function saveDailyState(){
   const obj = {};
   ['normal','hard','adult'].forEach(cat => {
@@ -557,9 +667,6 @@ function saveRerollsToday(){
   storageSet('rerolls_' + dateKey(), String(rerollsToday));
 }
 
-/* ============================================================
-   ПРОВЕРКА РАЗБЛОКИРОВКИ (24 часа от момента)
-   ============================================================ */
 function isUnlocked(cat){
   if(cat === 'normal') return true;
   if(fullAccess) return true;
@@ -569,7 +676,7 @@ function isUnlocked(cat){
 }
 
 /* ============================================================
-   ЗАГРУЗКА ПРОГРЕССА — VK Storage в приоритете
+   ЗАГРУЗКА ПРОГРЕССА
    ============================================================ */
 async function loadProgress(){
   const keys = [
@@ -582,7 +689,6 @@ async function loadProgress(){
 
   const data = await storageGetMultiple(keys);
 
-  // Состояние задач
   ['normal','hard','adult'].forEach(cat => {
     dailyState[cat] = { idx: -1, revealed: false };
   });
@@ -616,13 +722,11 @@ async function loadProgress(){
   if(isNaN(rerollsToday) || rerollsToday < 0) rerollsToday = 0;
   if(rerollsToday > MAX_REROLLS_PER_DAY) rerollsToday = MAX_REROLLS_PER_DAY;
 
-  // Разблокировки — timestamp + 24h
   const tsHard = parseInt(data['unlock_hard'], 10);
   const tsAdult = parseInt(data['unlock_adult'], 10);
   unlocked.hard = (!isNaN(tsHard) && tsHard > 0) ? tsHard : 0;
   unlocked.adult = (!isNaN(tsAdult) && tsAdult > 0) ? tsAdult : 0;
 
-  // Полный доступ — валидация
   const purchaseDateStr = data['full_access_purchase_date'];
   fullAccess = false;
   if(purchaseDateStr){
@@ -639,9 +743,6 @@ async function loadProgress(){
   updateLocks();
 }
 
-/* ============================================================
-   UI: reroll counter
-   ============================================================ */
 function updateRerollUI(){
   const remaining = Math.max(0, MAX_REROLLS_PER_DAY - rerollsToday);
   if(rerollLbl) rerollLbl.textContent = `${remaining}/${MAX_REROLLS_PER_DAY}`;
@@ -661,9 +762,6 @@ function updateLocks(){
   });
 }
 
-/* ============================================================
-   ВЫБОР ЗАДАЧИ
-   ============================================================ */
 function pickTaskIndex(cat, excludeIndex=-1){
   const list=CATEGORY_TASKS[cat];
   const used=usedToday[cat];
@@ -839,9 +937,6 @@ function initFilmInteraction(film, canvas){
   });
 }
 
-/* ============================================================
-   ПЕРЕКЛЮЧЕНИЕ КАТЕГОРИИ
-   ============================================================ */
 function switchCategory(cat, forceNew=false){
   currentCategory=cat;
   [...tabsEl.querySelectorAll('.tab')].forEach(btn=>{
@@ -871,80 +966,123 @@ function switchCategory(cat, forceNew=false){
 }
 
 /* ============================================================
-   РЕКЛАМА — единый механизм
+   МОДАЛЬНОЕ ОКНО РЕКЛАМЫ
    ============================================================ */
-function showRewardedAd(){
-  // Возвращает: 'success' | 'closed' | 'error' | 'no_ads' | 'cooldown'
+function requestRewardedAd(questionText){
   return new Promise(resolve => {
-    if(Date.now() - lastAdShownAt < AD_COOLDOWN_MS){
-      return resolve('cooldown');
-    }
-    if(!vkBridge){
-      const ok = confirm('Показать рекламу (эмуляция)?');
-      if(ok){ lastAdShownAt = Date.now(); return resolve('success'); }
-      return resolve('closed');
-    }
-    vkBridge.send('VKWebAppCheckNativeAds',{ad_format:'reward'})
-      .then(r => {
-        if(!r || !r.result) return resolve('no_ads');
-        lastAdShownAt = Date.now();
-        vkBridge.send('VKWebAppShowNativeAds',{ad_format:'reward'})
-          .then(res => {
-            if(res && res.result) resolve('success');
-            else resolve('closed');
-          })
-          .catch(err => {
-            console.warn('[Ads] show error', err);
-            resolve('error');
-          });
-      })
-      .catch(err => {
-        console.warn('[Ads] check error', err);
-        resolve('error');
-      });
-  });
-}
+    const modal     = document.getElementById('adModal');
+    const titleEl   = document.getElementById('adModalTitle');
+    const bodyEl    = document.getElementById('adModalBody');
+    const actionsEl = document.getElementById('adModalActions');
 
-function adResultMessage(res){
-  switch(res){
-    case 'closed':   return 'Реклама закрыта — попытка не списана';
-    case 'no_ads':   return 'Реклама сейчас недоступна';
-    case 'cooldown': return 'Подождите немного перед следующей рекламой';
-    case 'error':    return 'Не удалось загрузить рекламу';
-    default:         return '';
-  }
+    let settled = false;
+    let skipTimer = null;
+
+    function finish(result){
+      if(settled) return;
+      settled = true;
+      if(skipTimer){ clearTimeout(skipTimer); skipTimer = null; }
+      modal.classList.remove('show');
+      actionsEl.innerHTML = '';
+      resolve(result);
+    }
+
+    titleEl.textContent = 'Реклама';
+    bodyEl.innerHTML = questionText || 'Посмотреть рекламу?';
+    actionsEl.innerHTML =
+      '<button class="modal-btn primary" data-act="watch">Смотреть</button>' +
+      '<button class="modal-btn ghost" data-act="cancel">Отмена</button>';
+    modal.classList.add('show');
+
+    actionsEl.onclick = (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if(!btn) return;
+      const act = btn.dataset.act;
+
+      if(act === 'cancel'){
+        finish('cancelled');
+        return;
+      }
+
+      if(act === 'watch'){
+        bodyEl.innerHTML =
+          '<span class="ad-loading">Загружаем рекламу<span class="dots"><span>.</span><span>.</span><span>.</span></span></span>' +
+          '<span class="ad-hint" id="adHint">Пропуск появится через 5 сек</span>';
+        actionsEl.innerHTML = '';
+
+        skipTimer = setTimeout(() => {
+          if(settled) return;
+          const hint = document.getElementById('adHint');
+          if(hint) hint.remove();
+          bodyEl.innerHTML = 'Реклама долго не загружается';
+          actionsEl.innerHTML =
+            '<button class="modal-btn primary" data-act="skip">Пропустить и получить задание</button>';
+        }, AD_SKIP_AFTER_MS);
+
+        if(vkBridge){
+          vkBridge.send('VKWebAppShowNativeAds', {ad_format:'reward'})
+            .then(res => {
+              if(settled) return;
+              finish(res && res.result ? 'success' : 'closed');
+            })
+            .catch(err => {
+              console.warn('[Ads] error', err);
+              if(settled) return;
+              finish('error');
+            });
+        } else {
+          // Эмуляция в браузере
+          setTimeout(() => {
+            if(settled) return;
+            finish('success');
+          }, 1500);
+        }
+        return;
+      }
+
+      if(act === 'skip'){
+        finish('skipped');
+        return;
+      }
+    };
+  });
 }
 
 /* ============================================================
    РЕРОЛЛ
    ============================================================ */
-function doReroll(){
+async function doReroll(){
   if(!appReady) return;
   if(rerollBtn.classList.contains('loading') || rerollBtn.classList.contains('disabled')) return;
   if(rerollsToday >= MAX_REROLLS_PER_DAY) return;
 
-  if(currentCategory!=='normal' && !isUnlocked(currentCategory)){
+  if(currentCategory !== 'normal' && !isUnlocked(currentCategory)){
     requestUnlock(currentCategory);
     return;
   }
 
-  if(!confirm('Посмотреть рекламу и получить другое задание?')) return;
+  if(Date.now() - lastAdShownAt < AD_COOLDOWN_MS){
+    showToast('Подождите немного перед следующей рекламой');
+    return;
+  }
 
   rerollBtn.classList.add('loading');
+  const result = await requestRewardedAd('Посмотреть рекламу и получить другое задание?');
+  rerollBtn.classList.remove('loading');
 
-  showRewardedAd().then(result => {
-    rerollBtn.classList.remove('loading');
-    if(result === 'success'){
-      switchCategory(currentCategory, true);
-      rerollsToday++;
-      saveRerollsToday();
-      updateRerollUI();
-      haptic('light');
-    } else {
-      const msg = adResultMessage(result);
-      if(msg) showToast(msg);
-    }
-  });
+  if(result === 'success' || result === 'skipped'){
+    lastAdShownAt = Date.now();
+    switchCategory(currentCategory, true);
+    rerollsToday++;
+    saveRerollsToday();
+    updateRerollUI();
+    haptic('light');
+    if(result === 'skipped') showToast('Задание получено');
+  } else if(result === 'closed'){
+    showToast('Реклама закрыта — попытка не списана');
+  } else if(result === 'error'){
+    showToast('Не удалось загрузить рекламу');
+  }
 }
 
 rerollBtn.addEventListener('click', doReroll);
@@ -952,25 +1090,31 @@ rerollBtn.addEventListener('click', doReroll);
 /* ============================================================
    РАЗБЛОКИРОВКА РАЗДЕЛА
    ============================================================ */
-function requestUnlock(cat){
+async function requestUnlock(cat){
   if(!appReady) return;
+
+  if(Date.now() - lastAdShownAt < AD_COOLDOWN_MS){
+    showToast('Подождите немного перед следующей рекламой');
+    return;
+  }
+
   const label = cat === 'hard' ? 'Сложное' : 'Для пар';
+  const result = await requestRewardedAd(`Открыть раздел «${label}» на 24 часа за просмотр рекламы?`);
 
-  if(!confirm(`Открыть раздел «${label}» на 24 часа за просмотр рекламы?`)) return;
-
-  showRewardedAd().then(result => {
-    if(result === 'success'){
-      const now = Date.now();
-      unlocked[cat] = now;
-      storageSet('unlock_'+cat, String(now));
-      updateLocks();
-      switchCategory(cat);
-      haptic('light');
-    } else {
-      const msg = adResultMessage(result);
-      if(msg) showToast(msg);
-    }
-  });
+  if(result === 'success' || result === 'skipped'){
+    lastAdShownAt = Date.now();
+    const now = Date.now();
+    unlocked[cat] = now;
+    storageSet('unlock_'+cat, String(now));
+    updateLocks();
+    switchCategory(cat);
+    haptic('light');
+    if(result === 'skipped') showToast('Раздел открыт');
+  } else if(result === 'closed'){
+    showToast('Реклама закрыта — раздел не открыт');
+  } else if(result === 'error'){
+    showToast('Не удалось загрузить рекламу');
+  }
 }
 
 /* ============================================================
@@ -991,7 +1135,7 @@ tabsEl.addEventListener('click',(e)=>{
 });
 
 /* ============================================================
-   СИНХРОНИЗАЦИЯ ПРИ ВОЗВРАТЕ В ПРИЛОЖЕНИЕ
+   СИНХРОНИЗАЦИЯ ПРИ ВОЗВРАТЕ
    ============================================================ */
 function initViewRestoreSync(){
   if(!vkBridge) return;
@@ -1021,7 +1165,6 @@ function initViewRestoreSync(){
         dailyState[currentCategory].idx !== prevIdx ||
         dailyState[currentCategory].revealed !== prevRevealed
       ){
-        // Задача или состояние плёнки изменилось на другом устройстве — перерисуем
         switchCategory(currentCategory);
       } else if(stateChanged){
         updateRerollUI();
