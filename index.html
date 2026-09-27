@@ -571,39 +571,58 @@ const TASKS_ADULT=[
 const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD, adult:TASKS_ADULT};
 
 /* ============================================================
-   ХРАНИЛИЩЕ
+   ХРАНИЛИЩЕ (VK Storage — источник истины, localStorage — только fallback без VK)
    ============================================================ */
 function storageSet(key, value){
+  // Локальная копия (мгновенно)
   try{ localStorage.setItem('g_'+key, value); }catch(e){ console.warn('[LS] set failed', key, e); }
-  if(vkBridge){
-    return vkBridge.send('VKWebAppStorageSet',{key,value})
-      .catch(err => {
-        console.warn('[VK Storage] set failed', key, err);
-        return vkBridge.send('VKWebAppStorageSet',{key,value})
-          .catch(e2 => console.error('[VK Storage] retry failed', key, e2));
-      });
-  }
-  return Promise.resolve();
+
+  if(!vkBridge) return Promise.resolve(true);
+
+  // Запись в VK Storage с retry
+  return (async () => {
+    for(let attempt = 0; attempt < 3; attempt++){
+      try{
+        await vkBridge.send('VKWebAppStorageSet', {key, value});
+        return true;
+      }catch(e){
+        console.warn('[VK] set failed, attempt', attempt+1, key, e);
+        await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
+      }
+    }
+    console.error('[VK] set failed after retries:', key);
+    return false;
+  })();
 }
 
 async function storageGetMultiple(keys){
   const result = {};
+  let vkResponded = false;
+
   if(vkBridge){
     try{
       const r = await vkBridge.send('VKWebAppStorageGet', { keys });
       (r && r.keys || []).forEach(k => { result[k.key] = k.value; });
+      vkResponded = true;
     }catch(e){
-      console.warn('[VK Storage] get failed', e);
+      console.warn('[VK] get failed, falling back to localStorage', e);
     }
   }
+
+  if(vkResponded){
+    // VK ответил — доверяем ему полностью. Пустое значение = "не задано".
+    keys.forEach(k => {
+      if(result[k] === undefined || result[k] === null) result[k] = '';
+    });
+    return result;
+  }
+
+  // VK недоступен / нет bridge — читаем из localStorage
   keys.forEach(k => {
-    if(result[k] === undefined || result[k] === '' || result[k] === null){
-      try{
-        const ls = localStorage.getItem('g_'+k);
-        if(ls !== null && ls !== undefined) result[k] = ls;
-        else result[k] = localStorage.getItem(k) || '';
-      }catch(e){ result[k] = ''; }
-    }
+    try{
+      const ls = localStorage.getItem('g_'+k);
+      result[k] = (ls !== null && ls !== undefined) ? ls : (localStorage.getItem(k) || '');
+    }catch(e){ result[k] = ''; }
   });
   return result;
 }
@@ -627,7 +646,6 @@ const rerollLbl=document.getElementById('rerollLbl');
 
 let appReady=false;
 let currentCategory='normal';
-// unlocked — булевы флаги на текущий день (синхронизируются через VK Storage по дневному ключу)
 let unlocked={hard:false, adult:false};
 let fullAccess=false;
 let filmEl=null;
@@ -645,7 +663,7 @@ const dailyState = {
 };
 
 function stateKey(){ return 'state_' + dateKey(); }
-function unlockKey(cat){ return 'unlock_' + cat + '_' + dateKey(); }
+function unlocksKey(){ return 'unlocks_' + dateKey(); }
 
 function saveDailyState(){
   const obj = {};
@@ -663,8 +681,9 @@ function saveRerollsToday(){
   storageSet('rerolls_' + dateKey(), String(rerollsToday));
 }
 
-function saveUnlock(cat){
-  storageSet(unlockKey(cat), unlocked[cat] ? '1' : '0');
+function saveUnlocks(){
+  const value = JSON.stringify({hard: !!unlocked.hard, adult: !!unlocked.adult});
+  return storageSet(unlocksKey(), value);
 }
 
 function isUnlocked(cat){
@@ -680,8 +699,7 @@ async function loadProgress(){
   const keys = [
     stateKey(),
     'rerolls_' + dateKey(),
-    unlockKey('hard'),
-    unlockKey('adult'),
+    unlocksKey(),
     'full_access_purchase_date'
   ];
 
@@ -720,9 +738,19 @@ async function loadProgress(){
   if(isNaN(rerollsToday) || rerollsToday < 0) rerollsToday = 0;
   if(rerollsToday > MAX_REROLLS_PER_DAY) rerollsToday = MAX_REROLLS_PER_DAY;
 
-  // Разблокировки на текущий день — читаем ключи, привязанные к дате
-  unlocked.hard  = data[unlockKey('hard')]  === '1';
-  unlocked.adult = data[unlockKey('adult')] === '1';
+  // Разблокировки — единый ключ, JSON
+  unlocked.hard = false;
+  unlocked.adult = false;
+  try{
+    const rawUnlocks = data[unlocksKey()];
+    if(rawUnlocks){
+      const parsed = JSON.parse(rawUnlocks);
+      if(parsed && typeof parsed === 'object'){
+        unlocked.hard = parsed.hard === true;
+        unlocked.adult = parsed.adult === true;
+      }
+    }
+  }catch(e){ console.warn('[Unlocks] parse error', e); }
 
   const purchaseDateStr = data['full_access_purchase_date'];
   fullAccess = false;
@@ -738,6 +766,29 @@ async function loadProgress(){
 
   updateRerollUI();
   updateLocks();
+}
+
+/* Быстрая синхронизация только unlock'ов (для тапа по табу) */
+async function syncUnlocksFromVK(){
+  if(!vkBridge) return;
+  try{
+    const r = await vkBridge.send('VKWebAppStorageGet', { keys: [unlocksKey()] });
+    const items = (r && r.keys) || [];
+    const item = items.find(i => i.key === unlocksKey());
+    if(!item || !item.value) return;
+    const parsed = JSON.parse(item.value);
+    if(!parsed || typeof parsed !== 'object') return;
+    const newHard = parsed.hard === true;
+    const newAdult = parsed.adult === true;
+    if(newHard !== unlocked.hard || newAdult !== unlocked.adult){
+      unlocked.hard = newHard;
+      unlocked.adult = newAdult;
+      try{ localStorage.setItem('g_'+unlocksKey(), item.value); }catch(e){}
+      updateLocks();
+    }
+  }catch(e){
+    console.warn('[Unlocks] sync failed', e);
+  }
 }
 
 function updateRerollUI(){
@@ -1084,7 +1135,7 @@ async function doReroll(){
 rerollBtn.addEventListener('click', doReroll);
 
 /* ============================================================
-   РАЗБЛОКИРОВКА РАЗДЕЛА (до конца текущего дня, синхронизация между устройствами)
+   РАЗБЛОКИРОВКА РАЗДЕЛА
    ============================================================ */
 async function requestUnlock(cat){
   if(!appReady) return;
@@ -1100,11 +1151,15 @@ async function requestUnlock(cat){
   if(result === 'success' || result === 'skipped'){
     lastAdShownAt = Date.now();
     unlocked[cat] = true;
-    saveUnlock(cat);
     updateLocks();
     switchCategory(cat);
     haptic('light');
     if(result === 'skipped') showToast('Раздел открыт');
+
+    // Сохраняем асинхронно, с retry. Если совсем не удалось — предупреждаем.
+    saveUnlocks().then(ok => {
+      if(!ok) showToast('Не удалось сохранить на сервере — попробуйте позже');
+    });
   } else if(result === 'closed'){
     showToast('Реклама закрыта — раздел не открыт');
   } else if(result === 'error'){
@@ -1115,18 +1170,31 @@ async function requestUnlock(cat){
 /* ============================================================
    ТАБЫ
    ============================================================ */
-tabsEl.addEventListener('click',(e)=>{
+tabsEl.addEventListener('click', async (e)=>{
   if(!appReady) return;
   const btn=e.target.closest('.tab');
   if(!btn) return;
   const cat=btn.dataset.cat;
   if(cat===currentCategory) return;
+
+  // Уже открыто локально — просто переключаем
   if(isUnlocked(cat)){
     switchCategory(cat);
     haptic('light');
-  }else{
-    requestUnlock(cat);
+    return;
   }
+
+  // Синхронизируем состояние unlock'ов с VK, вдруг другое устройство открыло
+  await syncUnlocksFromVK();
+
+  if(isUnlocked(cat)){
+    switchCategory(cat);
+    haptic('light');
+    return;
+  }
+
+  // Всё ещё закрыто — просим рекламу
+  requestUnlock(cat);
 });
 
 /* ============================================================
@@ -1155,7 +1223,6 @@ function initViewRestoreSync(){
 
       if(dayChanged){
         lastRenderedDay = dateKey();
-        // На новый день — если текущая категория больше не разблокирована, уходим в normal
         if(!isUnlocked(currentCategory)){
           switchCategory('normal');
         } else {
@@ -1167,10 +1234,8 @@ function initViewRestoreSync(){
       ){
         switchCategory(currentCategory);
       } else if(stateChanged){
-        // Разблокировки/рероллы могли измениться на другом устройстве
         updateRerollUI();
         updateLocks();
-        // Если текущая категория оказалась заблокирована — уходим в normal
         if(!isUnlocked(currentCategory)){
           switchCategory('normal');
         }
