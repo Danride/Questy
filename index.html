@@ -231,9 +231,6 @@ body::before{
 }
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
-/* ============================================================
-   МОДАЛЬНОЕ ОКНО РЕКЛАМЫ
-   ============================================================ */
 .ad-modal{
   position:fixed;inset:0;z-index:200;
   display:flex;align-items:center;justify-content:center;
@@ -410,10 +407,8 @@ body::before{
 
 </div>
 
-<!-- ТОСТ -->
 <div class="toast" id="toast"></div>
 
-<!-- МОДАЛЬНОЕ ОКНО РЕКЛАМЫ -->
 <div class="ad-modal" id="adModal">
   <div class="ad-modal-backdrop"></div>
   <div class="ad-modal-card">
@@ -435,7 +430,6 @@ const APP_NAME = '360';
 const MAX_REROLLS_PER_DAY = 3;
 const AD_COOLDOWN_MS = 30000;
 const AD_SKIP_AFTER_MS = 5000;
-const UNLOCK_VALIDITY_MS = 24 * 60 * 60 * 1000;
 
 /* ============================================================
    ФОНОВЫЕ СИМВОЛЫ
@@ -633,7 +627,8 @@ const rerollLbl=document.getElementById('rerollLbl');
 
 let appReady=false;
 let currentCategory='normal';
-let unlocked={hard:0, adult:0};
+// unlocked — булевы флаги на текущий день (синхронизируются через VK Storage по дневному ключу)
+let unlocked={hard:false, adult:false};
 let fullAccess=false;
 let filmEl=null;
 let lastRenderedDay=dateKey();
@@ -650,6 +645,7 @@ const dailyState = {
 };
 
 function stateKey(){ return 'state_' + dateKey(); }
+function unlockKey(cat){ return 'unlock_' + cat + '_' + dateKey(); }
 
 function saveDailyState(){
   const obj = {};
@@ -667,12 +663,14 @@ function saveRerollsToday(){
   storageSet('rerolls_' + dateKey(), String(rerollsToday));
 }
 
+function saveUnlock(cat){
+  storageSet(unlockKey(cat), unlocked[cat] ? '1' : '0');
+}
+
 function isUnlocked(cat){
   if(cat === 'normal') return true;
   if(fullAccess) return true;
-  const ts = unlocked[cat];
-  if(!ts || typeof ts !== 'number' || isNaN(ts)) return false;
-  return (Date.now() - ts) < UNLOCK_VALIDITY_MS;
+  return !!unlocked[cat];
 }
 
 /* ============================================================
@@ -682,8 +680,8 @@ async function loadProgress(){
   const keys = [
     stateKey(),
     'rerolls_' + dateKey(),
-    'unlock_hard',
-    'unlock_adult',
+    unlockKey('hard'),
+    unlockKey('adult'),
     'full_access_purchase_date'
   ];
 
@@ -722,10 +720,9 @@ async function loadProgress(){
   if(isNaN(rerollsToday) || rerollsToday < 0) rerollsToday = 0;
   if(rerollsToday > MAX_REROLLS_PER_DAY) rerollsToday = MAX_REROLLS_PER_DAY;
 
-  const tsHard = parseInt(data['unlock_hard'], 10);
-  const tsAdult = parseInt(data['unlock_adult'], 10);
-  unlocked.hard = (!isNaN(tsHard) && tsHard > 0) ? tsHard : 0;
-  unlocked.adult = (!isNaN(tsAdult) && tsAdult > 0) ? tsAdult : 0;
+  // Разблокировки на текущий день — читаем ключи, привязанные к дате
+  unlocked.hard  = data[unlockKey('hard')]  === '1';
+  unlocked.adult = data[unlockKey('adult')] === '1';
 
   const purchaseDateStr = data['full_access_purchase_date'];
   fullAccess = false;
@@ -1031,7 +1028,6 @@ function requestRewardedAd(questionText){
               finish('error');
             });
         } else {
-          // Эмуляция в браузере
           setTimeout(() => {
             if(settled) return;
             finish('success');
@@ -1088,7 +1084,7 @@ async function doReroll(){
 rerollBtn.addEventListener('click', doReroll);
 
 /* ============================================================
-   РАЗБЛОКИРОВКА РАЗДЕЛА
+   РАЗБЛОКИРОВКА РАЗДЕЛА (до конца текущего дня, синхронизация между устройствами)
    ============================================================ */
 async function requestUnlock(cat){
   if(!appReady) return;
@@ -1099,13 +1095,12 @@ async function requestUnlock(cat){
   }
 
   const label = cat === 'hard' ? 'Сложное' : 'Для пар';
-  const result = await requestRewardedAd(`Открыть раздел «${label}» на 24 часа за просмотр рекламы?`);
+  const result = await requestRewardedAd(`Открыть раздел «${label}» до конца дня за просмотр рекламы?`);
 
   if(result === 'success' || result === 'skipped'){
     lastAdShownAt = Date.now();
-    const now = Date.now();
-    unlocked[cat] = now;
-    storageSet('unlock_'+cat, String(now));
+    unlocked[cat] = true;
+    saveUnlock(cat);
     updateLocks();
     switchCategory(cat);
     haptic('light');
@@ -1160,15 +1155,25 @@ function initViewRestoreSync(){
 
       if(dayChanged){
         lastRenderedDay = dateKey();
-        switchCategory(currentCategory);
+        // На новый день — если текущая категория больше не разблокирована, уходим в normal
+        if(!isUnlocked(currentCategory)){
+          switchCategory('normal');
+        } else {
+          switchCategory(currentCategory);
+        }
       } else if(
         dailyState[currentCategory].idx !== prevIdx ||
         dailyState[currentCategory].revealed !== prevRevealed
       ){
         switchCategory(currentCategory);
       } else if(stateChanged){
+        // Разблокировки/рероллы могли измениться на другом устройстве
         updateRerollUI();
         updateLocks();
+        // Если текущая категория оказалась заблокирована — уходим в normal
+        if(!isUnlocked(currentCategory)){
+          switchCategory('normal');
+        }
       }
     });
   });
