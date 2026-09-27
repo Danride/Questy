@@ -430,6 +430,7 @@ const APP_NAME = '360';
 const MAX_REROLLS_PER_DAY = 3;
 const AD_COOLDOWN_MS = 30000;
 const AD_SKIP_AFTER_MS = 5000;
+const VK_TIMEOUT_MS = 3500;
 
 /* ============================================================
    ФОНОВЫЕ СИМВОЛЫ
@@ -502,6 +503,24 @@ const AD_SKIP_AFTER_MS = 5000;
 const vkBridge = window.vkBridge;
 
 /* ============================================================
+   VK SEND С ТАЙМАУТОМ
+   ============================================================ */
+function vkSend(method, params){
+  if(!vkBridge) return Promise.reject(new Error('vkBridge not loaded'));
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if(done) return;
+      done = true;
+      reject(new Error('vk timeout: ' + method));
+    }, VK_TIMEOUT_MS);
+    vkBridge.send(method, params)
+      .then(r => { if(!done){ done = true; clearTimeout(timer); resolve(r); } })
+      .catch(e => { if(!done){ done = true; clearTimeout(timer); reject(e); } });
+  });
+}
+
+/* ============================================================
    TOAST
    ============================================================ */
 let toastTimer = null;
@@ -571,22 +590,20 @@ const TASKS_ADULT=[
 const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD, adult:TASKS_ADULT};
 
 /* ============================================================
-   ХРАНИЛИЩЕ (VK Storage — источник истины, localStorage — только fallback без VK)
+   ХРАНИЛИЩЕ
    ============================================================ */
 function storageSet(key, value){
-  // Локальная копия (мгновенно)
   try{ localStorage.setItem('g_'+key, value); }catch(e){ console.warn('[LS] set failed', key, e); }
 
   if(!vkBridge) return Promise.resolve(true);
 
-  // Запись в VK Storage с retry
   return (async () => {
     for(let attempt = 0; attempt < 3; attempt++){
       try{
-        await vkBridge.send('VKWebAppStorageSet', {key, value});
+        await vkSend('VKWebAppStorageSet', {key, value});
         return true;
       }catch(e){
-        console.warn('[VK] set failed, attempt', attempt+1, key, e);
+        console.warn('[VK] set failed, attempt', attempt+1, key, e.message || e);
         await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
       }
     }
@@ -601,23 +618,21 @@ async function storageGetMultiple(keys){
 
   if(vkBridge){
     try{
-      const r = await vkBridge.send('VKWebAppStorageGet', { keys });
+      const r = await vkSend('VKWebAppStorageGet', { keys });
       (r && r.keys || []).forEach(k => { result[k.key] = k.value; });
       vkResponded = true;
     }catch(e){
-      console.warn('[VK] get failed, falling back to localStorage', e);
+      console.warn('[VK] get failed, using localStorage', e.message || e);
     }
   }
 
   if(vkResponded){
-    // VK ответил — доверяем ему полностью. Пустое значение = "не задано".
     keys.forEach(k => {
       if(result[k] === undefined || result[k] === null) result[k] = '';
     });
     return result;
   }
 
-  // VK недоступен / нет bridge — читаем из localStorage
   keys.forEach(k => {
     try{
       const ls = localStorage.getItem('g_'+k);
@@ -693,7 +708,92 @@ function isUnlocked(cat){
 }
 
 /* ============================================================
-   ЗАГРУЗКА ПРОГРЕССА
+   ПАРСЕРЫ СОСТОЯНИЯ
+   ============================================================ */
+function applyStateJson(raw){
+  ['normal','hard','adult'].forEach(cat => {
+    dailyState[cat] = { idx: -1, revealed: false };
+  });
+  usedToday.normal.clear();
+  usedToday.hard.clear();
+  usedToday.adult.clear();
+
+  if(!raw) return;
+  try{
+    const parsed = JSON.parse(raw);
+    ['normal','hard','adult'].forEach(cat => {
+      if(parsed[cat]){
+        dailyState[cat].idx = (typeof parsed[cat].idx === 'number') ? parsed[cat].idx : -1;
+        dailyState[cat].revealed = !!parsed[cat].revealed;
+        if(dailyState[cat].idx >= 0){
+          usedToday[cat].add(dailyState[cat].idx);
+        }
+        if(Array.isArray(parsed[cat].used)){
+          parsed[cat].used.forEach(i => {
+            if(typeof i === 'number') usedToday[cat].add(i);
+          });
+        }
+      }
+    });
+  }catch(e){ console.warn('[State] parse error', e); }
+}
+
+function applyRerollsRaw(raw){
+  rerollsToday = raw ? parseInt(raw, 10) : 0;
+  if(isNaN(rerollsToday) || rerollsToday < 0) rerollsToday = 0;
+  if(rerollsToday > MAX_REROLLS_PER_DAY) rerollsToday = MAX_REROLLS_PER_DAY;
+}
+
+function applyUnlocksRaw(raw){
+  unlocked.hard = false;
+  unlocked.adult = false;
+  if(!raw) return;
+  try{
+    const parsed = JSON.parse(raw);
+    if(parsed && typeof parsed === 'object'){
+      unlocked.hard = parsed.hard === true;
+      unlocked.adult = parsed.adult === true;
+    }
+  }catch(e){ console.warn('[Unlocks] parse error', e); }
+}
+
+function applyFullAccessRaw(raw){
+  fullAccess = false;
+  if(!raw) return;
+  const ts = new Date(raw).getTime();
+  if(!isNaN(ts) && ts > 0 && ts <= Date.now()){
+    fullAccess = (Date.now() - ts) / 86400000 <= 365;
+  } else {
+    console.warn('[FullAccess] invalid purchase date:', raw);
+  }
+}
+
+/* ============================================================
+   БЫСТРАЯ ЗАГРУЗКА ИЗ LOCALSTORAGE (синхронно, мгновенно)
+   ============================================================ */
+function loadProgressFromLocal(){
+  try{
+    applyStateJson(localStorage.getItem('g_'+stateKey()) || '');
+  }catch(e){ applyStateJson(''); }
+
+  try{
+    applyRerollsRaw(localStorage.getItem('g_'+'rerolls_'+dateKey()));
+  }catch(e){ applyRerollsRaw(''); }
+
+  try{
+    applyUnlocksRaw(localStorage.getItem('g_'+unlocksKey()));
+  }catch(e){ applyUnlocksRaw(''); }
+
+  try{
+    applyFullAccessRaw(localStorage.getItem('g_full_access_purchase_date'));
+  }catch(e){ applyFullAccessRaw(''); }
+
+  updateRerollUI();
+  updateLocks();
+}
+
+/* ============================================================
+   ЗАГРУЗКА ИЗ VK STORAGE (с fallback на localStorage)
    ============================================================ */
 async function loadProgress(){
   const keys = [
@@ -705,89 +805,40 @@ async function loadProgress(){
 
   const data = await storageGetMultiple(keys);
 
-  ['normal','hard','adult'].forEach(cat => {
-    dailyState[cat] = { idx: -1, revealed: false };
-  });
-  usedToday.normal.clear();
-  usedToday.hard.clear();
-  usedToday.adult.clear();
+  applyStateJson(data[stateKey()] || '');
+  applyRerollsRaw(data['rerolls_' + dateKey()]);
+  applyUnlocksRaw(data[unlocksKey()]);
+  applyFullAccessRaw(data['full_access_purchase_date'] || '');
 
+  // Синхронизируем localStorage с тем, что вернул VK
   try{
-    const rawState = data[stateKey()];
-    if(rawState){
-      const parsed = JSON.parse(rawState);
-      ['normal','hard','adult'].forEach(cat => {
-        if(parsed[cat]){
-          dailyState[cat].idx = (typeof parsed[cat].idx === 'number') ? parsed[cat].idx : -1;
-          dailyState[cat].revealed = !!parsed[cat].revealed;
-          if(dailyState[cat].idx >= 0){
-            usedToday[cat].add(dailyState[cat].idx);
-          }
-          if(Array.isArray(parsed[cat].used)){
-            parsed[cat].used.forEach(i => {
-              if(typeof i === 'number') usedToday[cat].add(i);
-            });
-          }
-        }
-      });
+    localStorage.setItem('g_'+stateKey(), data[stateKey()] || '');
+    localStorage.setItem('g_'+'rerolls_'+dateKey(), String(rerollsToday));
+    localStorage.setItem('g_'+unlocksKey(), data[unlocksKey()] || '');
+    if(data['full_access_purchase_date']){
+      localStorage.setItem('g_full_access_purchase_date', data['full_access_purchase_date']);
     }
-  }catch(e){ console.warn('[Storage] state parse error', e); }
-
-  const rawRerolls = data['rerolls_' + dateKey()];
-  rerollsToday = rawRerolls ? parseInt(rawRerolls, 10) : 0;
-  if(isNaN(rerollsToday) || rerollsToday < 0) rerollsToday = 0;
-  if(rerollsToday > MAX_REROLLS_PER_DAY) rerollsToday = MAX_REROLLS_PER_DAY;
-
-  // Разблокировки — единый ключ, JSON
-  unlocked.hard = false;
-  unlocked.adult = false;
-  try{
-    const rawUnlocks = data[unlocksKey()];
-    if(rawUnlocks){
-      const parsed = JSON.parse(rawUnlocks);
-      if(parsed && typeof parsed === 'object'){
-        unlocked.hard = parsed.hard === true;
-        unlocked.adult = parsed.adult === true;
-      }
-    }
-  }catch(e){ console.warn('[Unlocks] parse error', e); }
-
-  const purchaseDateStr = data['full_access_purchase_date'];
-  fullAccess = false;
-  if(purchaseDateStr){
-    const ts = new Date(purchaseDateStr).getTime();
-    if(!isNaN(ts) && ts > 0 && ts <= Date.now()){
-      const diffDays = (Date.now() - ts) / 86400000;
-      fullAccess = diffDays <= 365;
-    } else {
-      console.warn('[FullAccess] invalid purchase date:', purchaseDateStr);
-    }
-  }
+  }catch(e){}
 
   updateRerollUI();
   updateLocks();
 }
 
-/* Быстрая синхронизация только unlock'ов (для тапа по табу) */
 async function syncUnlocksFromVK(){
   if(!vkBridge) return;
   try{
-    const r = await vkBridge.send('VKWebAppStorageGet', { keys: [unlocksKey()] });
+    const r = await vkSend('VKWebAppStorageGet', { keys: [unlocksKey()] });
     const items = (r && r.keys) || [];
     const item = items.find(i => i.key === unlocksKey());
-    if(!item || !item.value) return;
-    const parsed = JSON.parse(item.value);
-    if(!parsed || typeof parsed !== 'object') return;
-    const newHard = parsed.hard === true;
-    const newAdult = parsed.adult === true;
-    if(newHard !== unlocked.hard || newAdult !== unlocked.adult){
-      unlocked.hard = newHard;
-      unlocked.adult = newAdult;
-      try{ localStorage.setItem('g_'+unlocksKey(), item.value); }catch(e){}
+    const raw = item ? item.value : '';
+    const before = {h: unlocked.hard, a: unlocked.adult};
+    applyUnlocksRaw(raw);
+    try{ localStorage.setItem('g_'+unlocksKey(), raw); }catch(e){}
+    if(before.h !== unlocked.hard || before.a !== unlocked.adult){
       updateLocks();
     }
   }catch(e){
-    console.warn('[Unlocks] sync failed', e);
+    console.warn('[Unlocks] sync failed', e.message || e);
   }
 }
 
@@ -886,9 +937,10 @@ function initFilmInteraction(film, canvas){
   const ctx=canvas.getContext('2d');
   const dpr=Math.max(1,window.devicePixelRatio||1);
   const rect=film.getBoundingClientRect();
-  canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
+  canvas.width=Math.max(1, rect.width*dpr);
+  canvas.height=Math.max(1, rect.height*dpr);
   ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr,dpr);
-  drawFilmBase(ctx,rect.width,rect.height);
+  drawFilmBase(ctx, Math.max(1, rect.width), Math.max(1, rect.height));
 
   let drawing=false,lastX=null,lastY=null,revealed=false,checkScheduled=false;
   let checkFrame=0;
@@ -915,6 +967,7 @@ function initFilmInteraction(film, canvas){
   }
   function computePercent(){
     const w=canvas.width,h=canvas.height;
+    if(w < 2 || h < 2) return 0;
     const data=ctx.getImageData(0,0,w,h).data;
     let transparent=0,total=0;
     const step=48*4;
@@ -978,6 +1031,7 @@ function initFilmInteraction(film, canvas){
     resizeTimer=setTimeout(()=>{
       const dpr2=Math.max(1,window.devicePixelRatio||1);
       const r2=film.getBoundingClientRect();
+      if(r2.width < 2 || r2.height < 2) return;
       canvas.width=r2.width*dpr2;canvas.height=r2.height*dpr2;
       ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr2,dpr2);
       drawFilmBase(ctx,r2.width,r2.height);
@@ -1156,7 +1210,6 @@ async function requestUnlock(cat){
     haptic('light');
     if(result === 'skipped') showToast('Раздел открыт');
 
-    // Сохраняем асинхронно, с retry. Если совсем не удалось — предупреждаем.
     saveUnlocks().then(ok => {
       if(!ok) showToast('Не удалось сохранить на сервере — попробуйте позже');
     });
@@ -1177,14 +1230,12 @@ tabsEl.addEventListener('click', async (e)=>{
   const cat=btn.dataset.cat;
   if(cat===currentCategory) return;
 
-  // Уже открыто локально — просто переключаем
   if(isUnlocked(cat)){
     switchCategory(cat);
     haptic('light');
     return;
   }
 
-  // Синхронизируем состояние unlock'ов с VK, вдруг другое устройство открыло
   await syncUnlocksFromVK();
 
   if(isUnlocked(cat)){
@@ -1193,7 +1244,6 @@ tabsEl.addEventListener('click', async (e)=>{
     return;
   }
 
-  // Всё ещё закрыто — просим рекламу
   requestUnlock(cat);
 });
 
@@ -1247,17 +1297,41 @@ function initViewRestoreSync(){
 /* ============================================================
    СТАРТ
    ============================================================ */
-async function startApp(){
+function startApp(){
   initVKBridge();
   initViewRestoreSync();
-  try{
-    await loadProgress();
-  }catch(e){
-    console.warn('[Start] loadProgress failed', e);
-  }
+
+  // 1) Мгновенный рендер из локального кэша — UI появляется сразу
+  loadProgressFromLocal();
   lastRenderedDay = dateKey();
   appReady = true;
   switchCategory('normal');
+
+  // 2) Фоновая синхронизация с VK Storage
+  loadProgress().then(() => {
+    updateRerollUI();
+    updateLocks();
+
+    // Если на сервере состояние текущей задачи другое — перерисуем
+    const cat = currentCategory;
+    const serverIdx = dailyState[cat].idx;
+    const serverRevealed = dailyState[cat].revealed;
+    const shownIdx = currentTaskIndex;
+
+    const needsRedraw =
+      (serverIdx >= 0 && serverIdx !== shownIdx) ||
+      (serverRevealed && filmEl);
+
+    if(needsRedraw){
+      switchCategory(cat);
+    }
+
+    if(!isUnlocked(currentCategory)){
+      switchCategory('normal');
+    }
+  }).catch(e => {
+    console.warn('[Start] VK sync failed, staying on local cache:', e.message || e);
+  });
 }
 
 if(document.readyState==='loading'){
