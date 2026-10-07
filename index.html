@@ -31,6 +31,48 @@ body::before{
              radial-gradient(45% 40% at 20% 85%,rgba(155,92,246,.06),transparent 70%);
 }
 
+/* SPLASH */
+.splash{
+  position:fixed;inset:0;background:var(--bg);
+  z-index:300;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:18px;
+  transition:opacity .45s ease;
+}
+.splash.hide{opacity:0;pointer-events:none}
+.splash-star{
+  width:60px;height:60px;color:var(--accent);
+  animation:splashSpin 2s linear infinite;
+}
+.splash-star svg{width:100%;height:100%;display:block}
+.splash-text{
+  font-size:11px;letter-spacing:.3em;text-transform:uppercase;
+  color:rgba(245,239,226,.55);
+}
+@keyframes splashSpin{to{transform:rotate(360deg)}}
+
+/* FOCUS */
+button:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+  border-radius:6px;
+}
+
+/* DISABLED */
+.btn-action:disabled,
+.ad-boost-btn:disabled{
+  opacity:.35;pointer-events:none;
+  border-color:var(--line);color:rgba(245,239,226,.5);
+}
+
+/* REDUCED MOTION */
+@media (prefers-reduced-motion: reduce){
+  .bg-symbols,.burst,.splash-star,.mining-logo{animation:none !important;display:none}
+  .logo,.divider,.tabs,.task-row,.task-actions,.topbar,.bottom-nav{
+    animation:none !important;opacity:1 !important;
+  }
+  *{transition:none !important}
+}
+
 /* BG SYMBOLS */
 .bg-symbols{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
 .bg-sym{
@@ -176,10 +218,8 @@ body::before{
   min-height:clamp(140px,30vh,220px);
   padding:clamp(18px,4.5vw,26px) clamp(16px,4vw,24px);
   display:flex;align-items:center;justify-content:center;
-}
-.task-wrap::before{
-  content:"";position:absolute;inset:0;
-  border:1px solid var(--line);border-radius:16px;pointer-events:none;
+  border:1px solid var(--line);
+  border-radius:16px;
   transition:border-color .35s ease;
 }
 .task{
@@ -190,16 +230,22 @@ body::before{
   position:relative;width:52px;background:transparent;
   border:1px solid var(--line);border-radius:16px;
   color:var(--ink);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;
   font-family:'Unbounded',sans-serif;font-weight:700;
-  font-size:13px;letter-spacing:.04em;
+  font-size:12px;letter-spacing:.02em;
   transition:border-color .25s,background .25s,opacity .3s;
   flex-shrink:0;padding:0;
 }
 .reroll-btn:active{background:rgba(255,205,150,.14)}
+.reroll-btn .ico{
+  font-size:16px;line-height:1;
+  color:var(--accent);
+  transition:transform .35s cubic-bezier(.2,1,.3,1), color .35s ease;
+}
+.reroll-btn:active .ico{transform:rotate(360deg)}
 .reroll-btn.loading{pointer-events:none;opacity:.6}
-.reroll-btn.loading::after{content:"↻";position:absolute;font-size:18px;animation:spin 1s linear infinite}
-.reroll-btn.loading .lbl{opacity:0}
+.reroll-btn.loading .ico{animation:spin 1s linear infinite}
 .reroll-btn.disabled{pointer-events:none;opacity:.4}
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -255,6 +301,139 @@ body::before{
   opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none;
 }
 .progress.show{opacity:1}
+
+/* MINING */
+.mining-hero{
+  width:100%;display:flex;flex-direction:column;align-items:center;
+  padding:26px 20px 20px;gap:14px;position:relative;overflow:hidden;
+  border:1px solid var(--line-soft);border-radius:18px;
+}
+.mining-hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 30%,rgba(255,205,150,.14),transparent 65%);
+}
+.mining-logo{
+  position:relative;
+  width:clamp(84px,24vw,120px);height:clamp(84px,24vw,120px);
+  border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,#fff4dd,#ffd29a 45%,#ff8e53 85%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(42px,12vw,58px);font-weight:700;
+  color:#2a1a0a;
+  box-shadow:
+    0 0 40px rgba(255,205,150,.4),
+    0 0 80px rgba(255,150,90,.18),
+    inset 0 -10px 24px rgba(140,60,10,.35),
+    inset 0 8px 16px rgba(255,255,255,.4);
+  animation:miningFloat 3.4s ease-in-out infinite;
+  z-index:1;
+}
+@keyframes miningFloat{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-6px) scale(1.02)}
+}
+.mining-rate{
+  display:flex;align-items:baseline;gap:6px;
+  position:relative;z-index:1;
+}
+.mr-value{
+  font-size:26px;font-weight:700;color:var(--ink);
+  letter-spacing:-.02em;
+}
+.mr-unit{
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(245,239,226,.55);
+}
+.mining-level{
+  font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--accent);position:relative;z-index:1;
+}
+.mining-level span{font-weight:700;font-size:11px}
+
+.mining-storage{
+  width:100%;
+  border:1px solid var(--line-soft);border-radius:14px;
+  padding:14px 16px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.ms-header{
+  display:flex;justify-content:space-between;align-items:baseline;
+}
+.ms-label{
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(245,239,226,.55);
+}
+.ms-amount{font-size:14px;font-weight:700;color:var(--accent)}
+.ms-bar{
+  width:100%;height:6px;border-radius:3px;
+  background:rgba(245,239,226,.06);
+  overflow:hidden;position:relative;
+}
+.ms-fill{
+  height:100%;width:0;
+  background:linear-gradient(90deg,var(--accent-soft),var(--accent));
+  border-radius:3px;
+  transition:width .8s linear;
+  box-shadow:0 0 8px rgba(255,205,150,.4);
+}
+.ms-footer{
+  display:flex;justify-content:space-between;
+  font-size:9px;letter-spacing:.08em;
+  color:rgba(245,239,226,.45);
+}
+.mining-storage.full .ms-fill{background:linear-gradient(90deg,#ff8e53,#ff5544);box-shadow:0 0 10px rgba(255,120,80,.6)}
+.mining-storage.full .ms-amount{color:#ff8e53}
+
+.mining-upgrade{
+  width:100%;display:flex;align-items:center;gap:10px;
+  border:1px solid var(--line-soft);border-radius:14px;
+  padding:12px 14px;text-align:left;
+}
+.mining-upgrade .mu-info{flex:1;min-width:0}
+.mining-upgrade .mu-name{
+  font-size:11px;font-weight:700;color:var(--ink);letter-spacing:.02em;
+}
+.mining-upgrade .mu-desc{
+  font-size:9px;color:rgba(245,239,226,.5);margin-top:3px;line-height:1.4;
+}
+.mining-upgrade .mu-desc b{color:var(--accent);font-weight:700}
+.mining-upgrade .sc-buy{
+  flex-shrink:0;
+  font-family:'Unbounded',sans-serif;
+  font-size:10px;font-weight:700;letter-spacing:.06em;
+  color:var(--accent);
+  border:1px solid var(--accent);background:transparent;
+  padding:8px 12px;border-radius:10px;cursor:pointer;
+  transition:background .2s;
+}
+.mining-upgrade .sc-buy:active{background:rgba(255,205,150,.12)}
+.mining-upgrade .sc-buy:disabled{opacity:.3;pointer-events:none}
+
+.ad-boost-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 14px;
+  border:1px solid var(--accent);border-radius:14px;
+  background:rgba(255,205,150,.06);
+  color:var(--accent);
+  font-family:'Unbounded',sans-serif;
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  cursor:pointer;
+  transition:background .2s, opacity .2s;
+}
+.ad-boost-btn:active{background:rgba(255,205,150,.18)}
+.ad-boost-btn .abb-icon{font-size:14px;line-height:1}
+
+.boost-badge{
+  display:none;
+  width:100%;padding:10px 12px;
+  border:1px solid var(--accent);border-radius:12px;
+  background:rgba(255,205,150,.08);
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);
+  text-align:center;
+}
+.boost-badge.show{display:block;animation:fadeIn .3s ease}
+.boost-badge b{font-weight:700}
 
 /* CALENDAR */
 .cal-wrap{width:100%;display:flex;flex-direction:column;gap:10px}
@@ -423,7 +602,7 @@ body::before{
 .bottom-nav{
   flex-shrink:0;display:flex;align-items:center;justify-content:space-around;
   border:1px solid var(--line);border-radius:28px;
-  padding:6px;margin:0 auto;width:100%;max-width:400px;
+  padding:6px;margin:0 auto;width:100%;max-width:420px;
   background:rgba(20,20,24,.4);
   opacity:0;animation:fadeIn .8s ease .5s forwards;
   transition:border-color .35s ease;
@@ -432,8 +611,8 @@ body::before{
   flex:1;background:transparent;border:none;
   color:rgba(245,239,226,.55);
   font-family:'Unbounded',sans-serif;
-  font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-  padding:10px 4px;border-radius:22px;cursor:pointer;
+  font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:10px 2px;border-radius:22px;cursor:pointer;
   transition:color .25s, background .25s;
 }
 .bottom-nav button.active{color:var(--ink);background:rgba(255,205,150,.1)}
@@ -501,13 +680,22 @@ body::before{
 .ad-loading .dots span:nth-child(2){animation-delay:.15s}
 .ad-loading .dots span:nth-child(3){animation-delay:.3s}
 @keyframes dotPulse{0%,60%,100%{opacity:.25}30%{opacity:1}}
-.ad-hint{display:block;font-size:10px;letter-spacing:.12em;color:rgba(245,239,226,.5);text-transform:uppercase}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
 </head>
 <body>
+
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="splash-star">
+    <svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 0 -92 Q 6 -6 92 0 Q 6 6 0 92 Q -6 6 -92 0 Q -6 -6 0 -92 Z"
+            fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="splash-text">360</div>
+</div>
 
 <div class="bg-symbols" id="bgSymbols"></div>
 
@@ -518,8 +706,8 @@ body::before{
       <span class="bp-label">Баланс:</span>
       <span class="bp-value" id="balanceValue">0</span>
       <span class="bp-coin">Q</span>
-      <button class="gift-btn" id="giftBtn" title="Ежедневный подарок">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <button class="gift-btn" id="giftBtn" aria-label="Ежедневный подарок" title="Ежедневный подарок">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <rect x="3" y="9" width="18" height="12" rx="1.5"/>
           <path d="M3 13h18"/>
           <path d="M12 9v12"/>
@@ -529,9 +717,9 @@ body::before{
       </button>
     </div>
 
-    <div class="streak-badge">
+    <div class="streak-badge" aria-label="Серия дней">
       <div class="sb-star">
-        <svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M 0 -92 Q 6 -6 92 0 Q 6 6 0 92 Q -6 6 -92 0 Q -6 -6 0 -92 Z"
                 fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
         </svg>
@@ -546,7 +734,7 @@ body::before{
     <!-- TASK -->
     <section class="screen active" data-screen="task">
       <div class="logo">
-        <svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs>
             <linearGradient id="g1" x1="-100" y1="-100" x2="100" y2="100" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stop-color="#fff4dd"/>
@@ -578,7 +766,8 @@ body::before{
           <div class="task" id="task"></div>
           <div class="progress" id="progress"></div>
         </div>
-        <button class="reroll-btn" id="rerollBtn" title="Другое задание">
+        <button class="reroll-btn" id="rerollBtn" aria-label="Сменить задание" title="Другое задание">
+          <span class="ico">↻</span>
           <span class="lbl" id="rerollLbl">3/3</span>
         </button>
       </div>
@@ -588,6 +777,55 @@ body::before{
         <button class="btn-action skip" id="btnSkip">Не сделаю</button>
       </div>
       <div class="task-status hidden" id="taskStatus"></div>
+    </section>
+
+    <!-- MINING -->
+    <section class="screen" data-screen="mining">
+      <div class="screen-title">Добыча</div>
+
+      <div class="mining-hero">
+        <div class="mining-logo">Q</div>
+        <div class="mining-rate">
+          <span class="mr-value" id="miningRate">1</span>
+          <span class="mr-unit">Q / час</span>
+        </div>
+        <div class="mining-level">Уровень <span id="miningLevel">1</span></div>
+      </div>
+
+      <div class="boost-badge" id="boostBadge">
+        <b>⚡ Ускоритель ×2</b> · <span id="boostTime">—</span>
+      </div>
+
+      <div class="mining-storage" id="miningStorage">
+        <div class="ms-header">
+          <span class="ms-label">Накоплено</span>
+          <span class="ms-amount" id="miningStored">0 Q</span>
+        </div>
+        <div class="ms-bar"><div class="ms-fill" id="miningFill"></div></div>
+        <div class="ms-footer">
+          <span id="miningCapLabel">0 / 12 ч</span>
+          <span id="miningTimeLeft">—</span>
+        </div>
+      </div>
+
+      <div class="task-actions">
+        <button class="btn-action done" id="btnCollect">Забрать</button>
+      </div>
+
+      <div class="mining-upgrade">
+        <div class="mu-info">
+          <div class="mu-name">Улучшить установку</div>
+          <div class="mu-desc" id="upgradeDesc">
+            Уровень <b>2</b> · <b>1.1</b> Q/час · <b>+1</b> ч хранилища
+          </div>
+        </div>
+        <button class="sc-buy" id="btnUpgrade">150 Q</button>
+      </div>
+
+      <button class="ad-boost-btn" id="btnAdBoost">
+        <span class="abb-icon">⚡</span>
+        <span class="abb-text">Ускоритель ×2 на 2 часа</span>
+      </button>
     </section>
 
     <!-- CALENDAR -->
@@ -618,7 +856,7 @@ body::before{
 
     <!-- SHOP -->
     <section class="screen" data-screen="shop">
-      <div class="screen-title">Магазин</div>
+      <div class="screen-title">Лавка</div>
 
       <div class="shop-section">
         <div class="shop-section-title">Расходники</div>
@@ -650,7 +888,7 @@ body::before{
         <div class="profile-avatar-wrap" id="profileAvatarWrap">
           <div class="profile-avatar" id="profileAvatar">
             <img id="paImg" alt="" hidden>
-            <svg class="pa-fallback" id="paFallback" viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">
+            <svg class="pa-fallback" id="paFallback" viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M 0 -92 Q 6 -6 92 0 Q 6 6 0 92 Q -6 6 -92 0 Q -6 -6 0 -92 Z"
                     fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
             </svg>
@@ -668,6 +906,7 @@ body::before{
         <div class="stat-row"><span>Баланс</span><span id="profileBalance">0 Q</span></div>
         <div class="stat-row"><span>Всего выполнено</span><span id="profileDone">0</span></div>
         <div class="stat-row"><span>Сложных</span><span id="profileHard">0</span></div>
+        <div class="stat-row"><span>Уровень добычи</span><span id="profileMiningLvl">1</span></div>
       </div>
 
       <button class="share-btn" id="shareBtn">Поделиться прогрессом</button>
@@ -677,14 +916,15 @@ body::before{
 
   <nav class="bottom-nav" id="bottomNav">
     <button data-screen="calendar">Календарь</button>
+    <button data-screen="mining">Добыча</button>
     <button data-screen="task" class="active">Задание</button>
-    <button data-screen="shop">Магазин</button>
+    <button data-screen="shop">Лавка</button>
     <button data-screen="profile">Профиль</button>
   </nav>
 
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <div class="ad-modal" id="adModal">
   <div class="ad-modal-backdrop"></div>
@@ -701,24 +941,56 @@ body::before{
 const APP_URL = 'https://vk.ru/app54747359';
 const APP_NAME = '360';
 const MAX_REROLLS_PER_DAY = 3;
-const AD_COOLDOWN_MS = 30000;
-const AD_SKIP_AFTER_MS = 5000;
 const VK_TIMEOUT_MS = 3500;
 const DAILY_GIFT = 50;
-const REWARD_NORMAL = 10;
-const REWARD_HARD = 25;
 const PRICE_REROLL = 200;
 const HISTORY_MAX = 90;
+const SHARE_REWARD = 30;
+
+const AD_SKIP_AFTER_MS = 0;
+
+/* Добыча */
+const MINING_BASE_RATE = 1;
+const MINING_RATE_STEP = 0.1;
+const MINING_RATE_GROWTH = 1.25;
+const MINING_BASE_CAP_H = 12;
+const MINING_CAP_STEP_H = 1;
+const MINING_CAP_MAX_H = 24;
+const MINING_UPGRADE_BASE = 150;
+const MINING_UPGRADE_GROWTH = 1.7;
+const MINING_BOOST_MS = 2 * 3600 * 1000;
+const MINING_BOOST_MULT = 2;
+const MINING_TIME_SKEW_MS = 30 * 60 * 1000; // защита от перевода часов
+
+/* ============================================================
+   ИГРОВОЕ ВРЕМЯ
+   ============================================================ */
+let timeOffset = 0;
+function dateKey(offsetDays){
+  const d = new Date(Date.now() + timeOffset);
+  if(offsetDays) d.setDate(d.getDate() + offsetDays);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function shortDate(key){
+  const parts = key.split('-');
+  const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  return parseInt(parts[2],10) + ' ' + months[parseInt(parts[1],10)-1];
+}
+function seededIndex(seed,len){
+  let h=2166136261>>>0;
+  for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}
+  return(h>>>0)%len;
+}
 
 /* ============================================================
    ФОНОВЫЕ СИМВОЛЫ
    ============================================================ */
 (function initBgSymbols(){
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const container=document.getElementById('bgSymbols');
   const glyphs=['✦','✧','!','!','!','★','✶','!','·','✴','!','!'];
   const COUNT=26;
   function rand(min,max){return Math.random()*(max-min)+min}
-
   function spawnSymbol(){
     const el=document.createElement('span');
     el.className='bg-sym';
@@ -733,7 +1005,6 @@ const HISTORY_MAX = 90;
     const dx1=rand(-80,80),dy1=rand(-100,100);
     const dx2=rand(-100,100),dy2=rand(-120,120);
     const dx3=rand(-90,90),dy3=rand(-80,80);
-
     el.style.left=x+'%';el.style.top=y+'%';
     el.style.fontSize=size+'px';
     el.style.setProperty('--sym-opacity',opacity.toFixed(2));
@@ -745,11 +1016,9 @@ const HISTORY_MAX = 90;
     el.style.setProperty('--dx3',dx3+'px');el.style.setProperty('--dy3',dy3+'px');
     el.style.animationDelay=fadeDelay+'s,'+driftDelay+'s';
     el.style.animationDuration='1.2s,'+driftDur+'s';
-
     el.addEventListener('click',(e)=>{e.stopPropagation();burst(el)});
     container.appendChild(el);
   }
-
   function burst(sym){
     const rect=sym.getBoundingClientRect();
     const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
@@ -774,7 +1043,6 @@ const HISTORY_MAX = 90;
     setTimeout(()=>sym.remove(),300);
     setTimeout(spawnSymbol, rand(800,2200));
   }
-
   for(let i=0;i<COUNT;i++) spawnSymbol();
 })();
 
@@ -783,15 +1051,16 @@ const vkBridge = window.vkBridge;
 /* ============================================================
    VK SEND
    ============================================================ */
-function vkSend(method, params){
+function vkSend(method, params, timeoutMs){
   if(!vkBridge) return Promise.reject(new Error('vkBridge not loaded'));
+  const t = timeoutMs || VK_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
     let done = false;
     const timer = setTimeout(() => {
       if(done) return;
       done = true;
       reject(new Error('vk timeout: ' + method));
-    }, VK_TIMEOUT_MS);
+    }, t);
     vkBridge.send(method, params)
       .then(r => { if(!done){ done = true; clearTimeout(timer); resolve(r); } })
       .catch(e => { if(!done){ done = true; clearTimeout(timer); reject(e); } });
@@ -810,7 +1079,6 @@ function showToast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
 }
-
 function haptic(style){
   if(vkBridge){
     vkBridge.send('VKWebAppTapticImpactOccurred',{style:style||'light'}).catch(()=>{});
@@ -820,7 +1088,7 @@ function haptic(style){
 }
 
 /* ============================================================
-   VK BRIDGE INIT
+   VK INIT
    ============================================================ */
 function initVKBridge(){
   if(!vkBridge){ console.warn('[VK Bridge] не загружен'); return; }
@@ -856,7 +1124,6 @@ const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD};
 
 /* ============================================================
    ТЕМЫ
-   Каждая тема меняет палитру всего приложения + вид плёнки.
    ============================================================ */
 const THEMES = {
   classic:{
@@ -916,9 +1183,6 @@ const THEMES = {
   }
 };
 
-/* ============================================================
-   РАМКИ ПРОФИЛЯ — от дерева до алмаза
-   ============================================================ */
 const FRAMES = {
   none:    {name:'Без рамки',   price:0,   cls:'frame-none'},
   wood:    {name:'Деревянная',  price:100, cls:'frame-wood'},
@@ -930,23 +1194,48 @@ const FRAMES = {
 };
 
 /* ============================================================
-   STORAGE
+   STORAGE QUEUE
    ============================================================ */
-function storageSet(key, value){
-  try{ localStorage.setItem('g_'+key, value); }catch(e){}
-  if(!vkBridge) return Promise.resolve(true);
-  return (async () => {
-    for(let attempt = 0; attempt < 3; attempt++){
-      try{
-        await vkSend('VKWebAppStorageSet', {key, value});
-        return true;
-      }catch(e){
-        await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
-      }
-    }
-    return false;
-  })();
+const pendingSaves = new Map();
+let saveTimer = null;
+let saveInFlight = false;
+
+function queueStorageSet(key, value){
+  pendingSaves.set(key, String(value));
+  scheduleFlush();
 }
+function scheduleFlush(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSaves, 700);
+}
+async function flushSaves(){
+  saveTimer = null;
+  if(saveInFlight){ scheduleFlush(); return; }
+  if(pendingSaves.size === 0) return;
+  saveInFlight = true;
+  const entries = [...pendingSaves.entries()];
+  pendingSaves.clear();
+  entries.forEach(([key, value]) => {
+    try{ localStorage.setItem('g_'+key, value); }catch(e){}
+  });
+  if(vkBridge){
+    for(const [key, value] of entries){
+      try{ await vkSend('VKWebAppStorageSet', {key, value}); }
+      catch(e){}
+    }
+  }
+  saveInFlight = false;
+  if(pendingSaves.size > 0) scheduleFlush();
+}
+function flushSavesSync(){
+  pendingSaves.forEach((value, key) => {
+    try{ localStorage.setItem('g_'+key, value); }catch(e){}
+  });
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden'){ flushSavesSync(); flushSaves(); }
+});
+window.addEventListener('pagehide', () => { flushSavesSync(); flushSaves(); });
 
 async function storageGetMultiple(keys){
   const result = {};
@@ -969,22 +1258,6 @@ async function storageGetMultiple(keys){
     }catch(e){ result[k] = ''; }
   });
   return result;
-}
-
-function dateKey(offsetDays){
-  const d = new Date();
-  if(offsetDays) d.setDate(d.getDate() + offsetDays);
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-function shortDate(key){
-  const parts = key.split('-');
-  const months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-  return parseInt(parts[2],10) + ' ' + months[parseInt(parts[1],10)-1];
-}
-function seededIndex(seed,len){
-  let h=2166136261>>>0;
-  for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}
-  return(h>>>0)%len;
 }
 
 /* ============================================================
@@ -1014,9 +1287,7 @@ let currentCategory='normal';
 let unlocked={hard:false};
 let filmEl=null;
 let lastRenderedDay=dateKey();
-let lastAdShownAt=0;
 
-let currentTaskIndex=-1;
 const usedToday={normal:new Set(), hard:new Set()};
 let rerollsToday = 0;
 let bonusRerolls = 0;
@@ -1038,6 +1309,14 @@ let currentFrame = 'none';
 let history = [];
 let userPhoto = '';
 let userName = 'Игрок 360';
+
+/* Добыча */
+let mining = {
+  level: 1,
+  lastTick: Date.now(),
+  bonusEnd: 0,
+  bonusStart: 0
+};
 
 const dailyState = {
   normal: { idx: -1, revealed: false, done: false, skipped: false },
@@ -1061,24 +1340,32 @@ function saveDailyState(){
       used: [...usedToday[cat]]
     };
   });
-  storageSet(stateKey(), JSON.stringify(obj));
+  queueStorageSet(stateKey(), JSON.stringify(obj));
 }
-function saveRerollsToday(){ storageSet('rerolls_' + dateKey(), String(rerollsToday)); }
-function saveUnlocks(){ return storageSet(unlocksKey(), JSON.stringify({hard: !!unlocked.hard})); }
-function saveBonusRerolls(){ storageSet('bonus_rerolls', String(bonusRerolls)); }
-function saveBalance(){ storageSet('balance', String(balance)); }
-function saveStreak(){ storageSet('streak', String(streak)); }
-function saveBestStreak(){ storageSet('best_streak', String(bestStreak)); }
-function saveTotalDone(){ storageSet('total_done', String(totalDone)); }
-function saveTotalHardDone(){ storageSet('total_hard_done', String(totalHardDone)); }
-function saveLastDailyClaim(){ storageSet('last_daily_claim', lastDailyClaim); }
-function saveLastCompleteDate(){ storageSet('last_complete_date', lastCompleteDate); }
-function saveSharedOnce(){ storageSet('shared_once', sharedOnce ? '1' : '0'); }
-function saveOwnedThemes(){ storageSet('owned_themes', JSON.stringify(ownedThemes)); }
-function saveCurrentTheme(){ storageSet('current_theme', currentTheme); }
-function saveOwnedFrames(){ storageSet('owned_frames', JSON.stringify(ownedFrames)); }
-function saveCurrentFrame(){ storageSet('current_frame', currentFrame); }
-function saveHistory(){ storageSet('history', JSON.stringify(history.slice(-HISTORY_MAX))); }
+function saveRerollsToday(){ queueStorageSet('rerolls_' + dateKey(), String(rerollsToday)); }
+function saveUnlocks(){ return queueStorageSet(unlocksKey(), JSON.stringify({hard: !!unlocked.hard})); }
+function saveBonusRerolls(){ queueStorageSet('bonus_rerolls', String(bonusRerolls)); }
+function saveBalance(){ queueStorageSet('balance', String(balance)); }
+function saveStreak(){ queueStorageSet('streak', String(streak)); }
+function saveBestStreak(){ queueStorageSet('best_streak', String(bestStreak)); }
+function saveTotalDone(){ queueStorageSet('total_done', String(totalDone)); }
+function saveTotalHardDone(){ queueStorageSet('total_hard_done', String(totalHardDone)); }
+function saveLastDailyClaim(){ queueStorageSet('last_daily_claim', lastDailyClaim); }
+function saveLastCompleteDate(){ queueStorageSet('last_complete_date', lastCompleteDate); }
+function saveSharedOnce(){ queueStorageSet('shared_once', sharedOnce ? '1' : '0'); }
+function saveOwnedThemes(){ queueStorageSet('owned_themes', JSON.stringify(ownedThemes)); }
+function saveCurrentTheme(){ queueStorageSet('current_theme', currentTheme); }
+function saveOwnedFrames(){ queueStorageSet('owned_frames', JSON.stringify(ownedFrames)); }
+function saveCurrentFrame(){ queueStorageSet('current_frame', currentFrame); }
+function saveHistory(){ queueStorageSet('history', JSON.stringify(history.slice(-HISTORY_MAX))); }
+function saveMining(){
+  queueStorageSet('mining', JSON.stringify({
+    level: mining.level,
+    lastTick: mining.lastTick,
+    bonusEnd: mining.bonusEnd,
+    bonusStart: mining.bonusStart
+  }));
+}
 
 /* ============================================================
    PARSERS
@@ -1087,14 +1374,12 @@ function isUnlocked(cat){
   if(cat === 'normal') return true;
   return !!unlocked[cat];
 }
-
 function applyStateJson(raw){
   ['normal','hard'].forEach(cat => {
     dailyState[cat] = { idx: -1, revealed: false, done: false, skipped: false };
   });
   usedToday.normal.clear();
   usedToday.hard.clear();
-
   if(!raw) return;
   try{
     const parsed = JSON.parse(raw);
@@ -1124,10 +1409,240 @@ function applyUnlocksRaw(raw){
     if(parsed && typeof parsed === 'object') unlocked.hard = parsed.hard === true;
   }catch(e){}
 }
+function applyMiningRaw(raw){
+  try{
+    if(!raw){
+      mining = { level:1, lastTick: Date.now(), bonusEnd:0, bonusStart:0 };
+      return;
+    }
+    const p = JSON.parse(raw);
+    mining.level = Math.max(1, parseInt(p.level, 10) || 1);
+    mining.lastTick = parseInt(p.lastTick, 10) || Date.now();
+    mining.bonusEnd = parseInt(p.bonusEnd, 10) || 0;
+    // если bonusStart не сохранён (старые данные) — считаем его = bonusEnd - BOOST_MS
+    mining.bonusStart = parseInt(p.bonusStart, 10) || Math.max(0, mining.bonusEnd - MINING_BOOST_MS);
+    // защита от часов из будущего
+    if(mining.lastTick > Date.now() + 60000) mining.lastTick = Date.now();
+    if(mining.bonusEnd > Date.now() + MINING_BOOST_MS + 60000) mining.bonusEnd = 0;
+  }catch(e){
+    mining = { level:1, lastTick: Date.now(), bonusEnd:0, bonusStart:0 };
+  }
+}
 function parseIntSafe(raw, fallback){ const n = parseInt(raw, 10); return isNaN(n) ? fallback : n; }
 
 /* ============================================================
-   ТЕМЫ: применение
+   MINING LOGIC
+   ============================================================ */
+function miningRate(level){
+  if(level <= 10){
+    return +(MINING_BASE_RATE + (level - 1) * MINING_RATE_STEP).toFixed(2);
+  }
+  const base = MINING_BASE_RATE + 9 * MINING_RATE_STEP; // 1.9
+  return +(base * Math.pow(MINING_RATE_GROWTH, level - 10)).toFixed(2);
+}
+function miningCapHours(level){
+  return Math.min(MINING_CAP_MAX_H, MINING_BASE_CAP_H + (level - 1) * MINING_CAP_STEP_H);
+}
+function miningUpgradeCost(level){
+  return Math.floor(MINING_UPGRADE_BASE * Math.pow(MINING_UPGRADE_GROWTH, level - 1));
+}
+
+function computeMining(now){
+  now = now || Date.now();
+  const rate = miningRate(mining.level);
+  const capH = miningCapHours(mining.level);
+  const capMs = capH * 3600000;
+
+  const lastTick = mining.lastTick;
+
+  // сколько «реально» прошло (для защиты от перевода часов):
+  // если разница сильно больше cap — считаем, что прошло ровно cap
+  const realElapsed = now - lastTick;
+  const cappedElapsed = Math.min(realElapsed, capMs);
+  const cappedEnd = lastTick + cappedElapsed;
+  const totalMs = cappedElapsed;
+
+  // #1 — бонус считаем строго в окне [bonusStart, bonusEnd] ∩ [lastTick, cappedEnd]
+  let bonusMs = 0;
+  if(mining.bonusEnd > 0){
+    const bs = Math.max(lastTick, mining.bonusStart);
+    const be = Math.min(mining.bonusEnd, cappedEnd);
+    if(be > bs) bonusMs = be - bs;
+  }
+  const normalMs = Math.max(0, totalMs - bonusMs);
+
+  const earned = rate * (
+    (normalMs / 3600000) +
+    (bonusMs / 3600000) * MINING_BOOST_MULT
+  );
+
+  const isFull = realElapsed >= capMs;
+  const bonusActive = now < mining.bonusEnd;
+
+  return { rate, capH, capMs, totalMs, bonusMs, earned, isFull, bonusActive };
+}
+
+function collectMining(){
+  if(!appReady) return;
+  const now = Date.now();
+  const m = computeMining(now);
+  const amt = Math.floor(m.earned);
+  if(amt <= 0){
+    showToast('Пока нечего забирать');
+    return;
+  }
+  balance += amt;
+  mining.lastTick = now;
+  // очищаем истёкший буст
+  if(mining.bonusEnd > 0 && mining.bonusEnd <= now){
+    mining.bonusEnd = 0;
+    mining.bonusStart = 0;
+  }
+  saveBalance();
+  saveMining();
+  updateBalanceUI();
+  updateMiningUI();
+  renderMining();
+  haptic('medium');
+  showToast('+' + amt + ' Q');
+}
+
+function upgradeMining(){
+  if(!appReady) return;
+  const cost = miningUpgradeCost(mining.level);
+  if(balance < cost){
+    showToast('Не хватает Q');
+    return;
+  }
+  balance -= cost;
+  // перед апгрейдом — зачислим накопленное, чтобы не потерять
+  const now = Date.now();
+  const m = computeMining(now);
+  const pending = Math.floor(m.earned);
+  if(pending > 0) balance += pending;
+  mining.lastTick = now;
+  mining.level += 1;
+
+  saveBalance();
+  saveMining();
+  updateBalanceUI();
+  updateMiningUI();
+  renderMining();
+  haptic('medium');
+  showToast('Уровень добычи: ' + mining.level);
+}
+
+async function activateMiningBoost(){
+  if(!appReady) return;
+  const now = Date.now();
+  if(now < mining.bonusEnd){
+    showToast('Ускоритель уже активен');
+    return;
+  }
+  const result = await requestRewardedAd('Ускоритель ×2 к добыче на 2 часа за просмотр рекламы?');
+  if(result === 'success' || result === 'skipped'){
+    const t0 = Date.now();
+    mining.bonusStart = t0;
+    mining.bonusEnd = t0 + MINING_BOOST_MS;
+    saveMining();
+    renderMining();
+    updateMiningUI();
+    haptic('medium');
+    showToast('⚡ Ускоритель активирован');
+  } else if(result === 'closed'){
+    showToast('Реклама закрыта');
+  } else if(result === 'error'){
+    showToast('Не удалось загрузить рекламу');
+  }
+}
+
+/* ============================================================
+   MINING UI
+   ============================================================ */
+function updateMiningUI(){
+  document.getElementById('miningLevel').textContent = String(mining.level);
+  document.getElementById('profileMiningLvl').textContent = String(mining.level);
+
+  const rate = miningRate(mining.level);
+  document.getElementById('miningRate').textContent = String(rate);
+
+  const nextLevel = mining.level + 1;
+  const cost = miningUpgradeCost(mining.level);
+  const nextRate = miningRate(nextLevel);
+  const nextCap = miningCapHours(nextLevel);
+  const curCap = miningCapHours(mining.level);
+  const capDelta = nextCap - curCap;
+  document.getElementById('upgradeDesc').innerHTML =
+    'Уровень <b>' + nextLevel + '</b> · <b>' + nextRate + '</b> Q/час' +
+    (capDelta > 0 ? ' · <b>+' + capDelta + '</b> ч хранилища' : '');
+  const btnUp = document.getElementById('btnUpgrade');
+  btnUp.textContent = cost + ' Q';
+  btnUp.disabled = balance < cost;
+}
+
+function renderMining(){
+  const now = Date.now();
+  const m = computeMining(now);
+
+  document.getElementById('miningStored').textContent = Math.floor(m.earned) + ' Q';
+
+  const capLabel = document.getElementById('miningCapLabel');
+  const timeLeft = document.getElementById('miningTimeLeft');
+  const totalH = m.totalMs / 3600000;
+  capLabel.textContent = totalH.toFixed(1) + ' / ' + m.capH + ' ч';
+
+  const remainingMs = Math.max(0, m.capMs - m.totalMs);
+  if(remainingMs <= 60000){
+    timeLeft.textContent = 'заполнено';
+  } else {
+    const h = Math.floor(remainingMs / 3600000);
+    const min = Math.floor((remainingMs % 3600000) / 60000);
+    timeLeft.textContent = h > 0 ? ('до полного ' + h + 'ч ' + min + 'м') : ('до полного ' + min + 'м');
+  }
+
+  const pct = Math.min(100, (m.totalMs / m.capMs) * 100);
+  document.getElementById('miningFill').style.width = pct + '%';
+  document.getElementById('miningStorage').classList.toggle('full', m.isFull);
+
+  // #5 — дизейблим «Забрать» при нуле
+  document.getElementById('btnCollect').disabled = Math.floor(m.earned) < 1;
+
+  // Бонус-бейдж
+  const badge = document.getElementById('boostBadge');
+  const boostTimeEl = document.getElementById('boostTime');
+  if(m.bonusActive){
+    badge.classList.add('show');
+    const left = mining.bonusEnd - now;
+    const hh = Math.floor(left / 3600000);
+    const mm = Math.floor((left % 3600000) / 60000);
+    boostTimeEl.textContent = hh > 0 ? (hh + 'ч ' + mm + 'м осталось') : (mm + 'м осталось');
+  } else {
+    badge.classList.remove('show');
+  }
+
+  // #3 + #6 — кнопка boost разблокируется сразу после окончания
+  const btnAd = document.getElementById('btnAdBoost');
+  const needDisabled = m.bonusActive;
+  if(btnAd.disabled !== needDisabled){
+    btnAd.disabled = needDisabled;
+    btnAd.querySelector('.abb-text').textContent = needDisabled
+      ? 'Ускоритель активен'
+      : 'Ускоритель ×2 на 2 часа';
+  }
+}
+
+setInterval(() => {
+  if(!appReady) return;
+  const active = document.querySelector('.screen.active');
+  if(active && active.dataset.screen === 'mining') renderMining();
+}, 1000);
+
+document.getElementById('btnCollect').addEventListener('click', collectMining);
+document.getElementById('btnUpgrade').addEventListener('click', upgradeMining);
+document.getElementById('btnAdBoost').addEventListener('click', activateMiningBoost);
+
+/* ============================================================
+   THEME
    ============================================================ */
 function applyTheme(themeId){
   const t = THEMES[themeId] || THEMES.classic;
@@ -1153,8 +1668,11 @@ function applyTheme(themeId){
       navigation_bar_color: bg
     }).catch(()=>{});
   }
-  // перерисовать плёнку, если она ещё не стёрта и не тронута
-  if(filmEl && filmEl.parentNode && !filmEl.classList.contains('partial') && !filmEl.classList.contains('revealing')){
+
+  if(filmEl && filmEl.parentNode
+     && !filmEl.dataset.scratched
+     && !filmEl.classList.contains('revealing')
+     && !filmEl.classList.contains('partial')){
     const cv = filmEl.querySelector('canvas');
     if(cv){
       const dpr = Math.max(1, window.devicePixelRatio||1);
@@ -1208,6 +1726,7 @@ function updateLocks(){
 function updateProfileStats(){
   document.getElementById('profileDone').textContent = String(totalDone);
   document.getElementById('profileHard').textContent = String(totalHardDone);
+  document.getElementById('profileMiningLvl').textContent = String(mining.level);
 }
 function updateUserName(){
   document.getElementById('piName').textContent = userName;
@@ -1216,6 +1735,7 @@ function renderProfileAvatar(){
   const img = document.getElementById('paImg');
   const fb = document.getElementById('paFallback');
   if(userPhoto){
+    img.onerror = () => { img.hidden = true; fb.style.display = 'block'; };
     img.src = userPhoto;
     img.hidden = false;
     fb.style.display = 'none';
@@ -1243,8 +1763,7 @@ function updateTaskActionsUI(){
   if(st.done){
     taskStatus.classList.remove('hidden');
     taskStatus.classList.add('ok');
-    const reward = currentCategory === 'hard' ? REWARD_HARD : REWARD_NORMAL;
-    taskStatus.textContent = '✓ Выполнено · +' + reward + ' Q';
+    taskStatus.textContent = '✓ Выполнено';
     return;
   }
   if(st.skipped){
@@ -1270,6 +1789,7 @@ giftBtn.addEventListener('click', () => {
   saveBalance();
   saveLastDailyClaim();
   updateBalanceUI();
+  updateMiningUI();
   haptic('medium');
   showToast('+' + DAILY_GIFT + ' Q');
 });
@@ -1286,6 +1806,7 @@ bottomNav.addEventListener('click', (e) => {
   if(target === 'calendar') renderCalendar();
   if(target === 'profile') { updateProfileStats(); updateStreakUI(); updateBalanceUI(); renderProfileAvatar(); renderProfileFrame(); }
   if(target === 'shop') renderShop();
+  if(target === 'mining') { updateMiningUI(); renderMining(); }
   haptic('light');
 });
 
@@ -1296,6 +1817,7 @@ function loadProgressFromLocal(){
   try{ applyStateJson(localStorage.getItem('g_'+stateKey()) || ''); }catch(e){ applyStateJson(''); }
   try{ applyRerollsRaw(localStorage.getItem('g_'+'rerolls_'+dateKey())); }catch(e){ applyRerollsRaw(''); }
   try{ applyUnlocksRaw(localStorage.getItem('g_'+unlocksKey())); }catch(e){ applyUnlocksRaw(''); }
+  try{ applyMiningRaw(localStorage.getItem('g_mining')); }catch(e){ applyMiningRaw(''); }
 
   balance = parseIntSafe(localStorage.getItem('g_balance'), 0);
   streak = parseIntSafe(localStorage.getItem('g_streak'), 0);
@@ -1328,7 +1850,10 @@ function loadProgressFromLocal(){
   }catch(e){}
 
   applyTheme(currentTheme);
+  maybeResetStreak();
+  reconcileUsedToday();
   refreshAll();
+  updateMiningUI();
 }
 
 async function loadProgress(){
@@ -1339,13 +1864,15 @@ async function loadProgress(){
     'balance','streak','best_streak','total_done','total_hard_done',
     'bonus_rerolls','last_daily_claim','last_complete_date',
     'shared_once','owned_themes','current_theme',
-    'owned_frames','current_frame','history','user_photo','user_name'
+    'owned_frames','current_frame','history','user_photo','user_name',
+    'mining'
   ];
   const data = await storageGetMultiple(keys);
 
   applyStateJson(data[stateKey()] || '');
   applyRerollsRaw(data['rerolls_' + dateKey()]);
   applyUnlocksRaw(data[unlocksKey()]);
+  applyMiningRaw(data['mining']);
 
   balance = parseIntSafe(data['balance'], balance);
   streak = parseIntSafe(data['streak'], streak);
@@ -1364,6 +1891,8 @@ async function loadProgress(){
   if(!ownedFrames.includes('none')) ownedFrames.unshift('none');
   if(data['current_frame']) currentFrame = data['current_frame'];
   try{ if(data['history']) history = JSON.parse(data['history']) || history; }catch(e){}
+  if(data['user_photo']) userPhoto = data['user_photo'];
+  if(data['user_name']) userName = data['user_name'];
 
   try{
     localStorage.setItem('g_'+stateKey(), data[stateKey()] || '');
@@ -1383,12 +1912,16 @@ async function loadProgress(){
     localStorage.setItem('g_owned_frames', JSON.stringify(ownedFrames));
     localStorage.setItem('g_current_frame', currentFrame);
     localStorage.setItem('g_history', JSON.stringify(history));
+    localStorage.setItem('g_mining', JSON.stringify(mining));
     if(userPhoto) localStorage.setItem('g_user_photo', userPhoto);
     if(userName) localStorage.setItem('g_user_name', userName);
   }catch(e){}
 
   applyTheme(currentTheme);
+  maybeResetStreak();
+  reconcileUsedToday();
   refreshAll();
+  updateMiningUI();
 }
 
 async function loadUserProfile(){
@@ -1398,17 +1931,22 @@ async function loadUserProfile(){
     if(info){
       if(info.photo_200) userPhoto = info.photo_200;
       else if(info.photo_100) userPhoto = info.photo_100;
+      else userPhoto = '';
+
       if(info.first_name){
         userName = info.first_name + (info.last_name ? ' ' + info.last_name : '');
+      } else {
+        userName = 'Игрок 360';
       }
+
       renderProfileAvatar();
       updateUserName();
       try{
         localStorage.setItem('g_user_photo', userPhoto);
         localStorage.setItem('g_user_name', userName);
       }catch(e){}
-      storageSet('user_photo', userPhoto);
-      storageSet('user_name', userName);
+      queueStorageSet('user_photo', userPhoto);
+      queueStorageSet('user_name', userName);
     }
   }catch(e){ console.warn('[VK] user info failed', e.message || e); }
 }
@@ -1422,6 +1960,32 @@ function refreshAll(){
   renderProfileAvatar();
   renderProfileFrame();
   updateUserName();
+}
+
+function reconcileUsedToday(){
+  const today = dateKey();
+  const todayItems = history.filter(h => h.d === today);
+  todayItems.forEach(h => {
+    const list = CATEGORY_TASKS[h.c];
+    if(!list) return;
+    const idx = list.indexOf(h.t);
+    if(idx >= 0) usedToday[h.c].add(idx);
+  });
+  ['normal','hard'].forEach(cat => {
+    if(dailyState[cat].idx >= 0) usedToday[cat].add(dailyState[cat].idx);
+  });
+}
+
+function maybeResetStreak(){
+  if(!lastCompleteDate) return;
+  const yesterday = dateKey(-1);
+  const today = dateKey();
+  if(lastCompleteDate !== today && lastCompleteDate !== yesterday){
+    if(streak !== 0){
+      streak = 0;
+      saveStreak();
+    }
+  }
 }
 
 /* ============================================================
@@ -1580,6 +2144,7 @@ function initFilmInteraction(film, canvas){
   }
   function start(e){
     e.preventDefault();drawing=true;film.classList.remove('hint');
+    film.dataset.scratched = '1';
     if(film.setPointerCapture){try{film.setPointerCapture(e.pointerId)}catch(err){}}
     const p=pos(e);lastX=p.x;lastY=p.y;erase(p.x,p.y);scheduleCheck();
   }
@@ -1595,6 +2160,7 @@ function initFilmInteraction(film, canvas){
   let resizeTimer;
   window.addEventListener('resize',()=>{
     if(!film.parentNode || film.classList.contains('revealing')) return;
+    if(film.dataset.scratched) return;
     clearTimeout(resizeTimer);
     resizeTimer=setTimeout(()=>{
       const dpr2=Math.max(1,window.devicePixelRatio||1);
@@ -1615,10 +2181,12 @@ function handleDone(){
   const st = dailyState[currentCategory];
   if(st.done || st.skipped) return;
   if(!st.revealed){ showToast('Сначала сотри плёнку'); return; }
+  if(currentCategory !== 'normal' && !isUnlocked(currentCategory)){
+    showToast('Раздел не разблокирован');
+    return;
+  }
 
-  const reward = currentCategory === 'hard' ? REWARD_HARD : REWARD_NORMAL;
   st.done = true;
-  balance += reward;
   totalDone++;
   if(currentCategory === 'hard') totalHardDone++;
 
@@ -1629,20 +2197,19 @@ function handleDone(){
     else streak = 1;
     lastCompleteDate = today;
     if(streak > bestStreak) bestStreak = streak;
-    if(streak === 7){ balance += 100; showToast('+100 Q за 7 дней подряд!'); }
-    if(streak === 30){ balance += 500; showToast('+500 Q за 30 дней подряд!'); }
+    if(streak === 7) showToast('Серия 7 дней!');
+    if(streak === 30) showToast('Серия 30 дней!');
   }
 
   history.push({
     d: today,
     c: currentCategory,
-    t: CATEGORY_TASKS[currentCategory][currentTaskIndex],
+    t: CATEGORY_TASKS[currentCategory][st.idx],
     ok: true
   });
   if(history.length > HISTORY_MAX) history = history.slice(-HISTORY_MAX);
 
   saveDailyState();
-  saveBalance();
   saveStreak();
   saveBestStreak();
   saveTotalDone();
@@ -1651,9 +2218,8 @@ function handleDone(){
   saveHistory();
 
   haptic('medium');
-  showToast('+' + reward + ' Q');
+  showToast('Задание выполнено');
   updateTaskActionsUI();
-  updateBalanceUI();
   updateStreakUI();
   updateProfileStats();
 }
@@ -1669,7 +2235,7 @@ function handleSkip(){
   history.push({
     d: today,
     c: currentCategory,
-    t: CATEGORY_TASKS[currentCategory][currentTaskIndex],
+    t: CATEGORY_TASKS[currentCategory][st.idx],
     ok: false
   });
   if(history.length > HISTORY_MAX) history = history.slice(-HISTORY_MAX);
@@ -1692,27 +2258,25 @@ function switchCategory(cat, forceNew=false){
     btn.classList.toggle('active', btn.dataset.cat===cat);
   });
   const list=CATEGORY_TASKS[cat];
+  const st = dailyState[cat];
 
   if(forceNew){
-    currentTaskIndex = pickTaskIndex(cat, currentTaskIndex);
-    dailyState[cat].idx = currentTaskIndex;
-    dailyState[cat].revealed = false;
-    dailyState[cat].done = false;
-    dailyState[cat].skipped = false;
+    st.idx = pickTaskIndex(cat, st.idx);
+    st.revealed = false;
+    st.done = false;
+    st.skipped = false;
     saveDailyState();
   } else {
-    if(dailyState[cat].idx < 0){
-      currentTaskIndex = seededIndex(dateKey()+':'+cat, list.length);
-      dailyState[cat].idx = currentTaskIndex;
-      usedToday[cat].add(currentTaskIndex);
+    if(st.idx < 0){
+      st.idx = seededIndex(dateKey()+':'+cat, list.length);
+      usedToday[cat].add(st.idx);
       saveDailyState();
     } else {
-      currentTaskIndex = dailyState[cat].idx;
-      usedToday[cat].add(currentTaskIndex);
+      usedToday[cat].add(st.idx);
     }
   }
 
-  taskEl.textContent = list[currentTaskIndex];
+  taskEl.textContent = list[st.idx];
   buildFilm();
 }
 
@@ -1727,12 +2291,9 @@ function requestRewardedAd(questionText){
     const actionsEl = document.getElementById('adModalActions');
 
     let settled = false;
-    let skipTimer = null;
-
     function finish(result){
       if(settled) return;
       settled = true;
-      if(skipTimer){ clearTimeout(skipTimer); skipTimer = null; }
       modal.classList.remove('show');
       actionsEl.innerHTML = '';
       resolve(result);
@@ -1754,23 +2315,14 @@ function requestRewardedAd(questionText){
 
       if(act === 'watch'){
         bodyEl.innerHTML =
-          '<span class="ad-loading">Загружаем рекламу<span class="dots"><span>.</span><span>.</span><span>.</span></span></span>' +
-          '<span class="ad-hint" id="adHint">Пропуск появится через 5 сек</span>';
-        actionsEl.innerHTML = '';
-
-        skipTimer = setTimeout(() => {
-          if(settled) return;
-          const hint = document.getElementById('adHint');
-          if(hint) hint.remove();
-          bodyEl.innerHTML = 'Реклама долго не загружается';
-          actionsEl.innerHTML =
-            '<button class="modal-btn primary" data-act="skip">Пропустить и получить</button>';
-        }, AD_SKIP_AFTER_MS);
+          '<span class="ad-loading">Загружаем рекламу<span class="dots"><span>.</span><span>.</span><span>.</span></span></span>';
+        actionsEl.innerHTML =
+          '<button class="modal-btn primary" data-act="skip">Пропустить и получить</button>';
 
         if(vkBridge){
           vkBridge.send('VKWebAppShowNativeAds', {ad_format:'reward'})
             .then(res => { if(!settled) finish(res && res.result ? 'success' : 'closed'); })
-            .catch(err => { if(!settled) finish('error'); });
+            .catch(() => { if(!settled) finish('error'); });
         } else {
           setTimeout(() => { if(!settled) finish('success'); }, 1500);
         }
@@ -1788,6 +2340,17 @@ function requestRewardedAd(questionText){
 async function doReroll(){
   if(!appReady) return;
   if(rerollBtn.classList.contains('loading') || rerollBtn.classList.contains('disabled')) return;
+
+  const st = dailyState[currentCategory];
+  if(st.done){
+    showToast('Вы уже выполнили задание — приходите завтра');
+    return;
+  }
+  if(st.skipped){
+    showToast('Задание пропущено — приходите завтра');
+    return;
+  }
+
   const totalAllowed = MAX_REROLLS_PER_DAY + bonusRerolls;
   if(rerollsToday >= totalAllowed) return;
 
@@ -1796,17 +2359,11 @@ async function doReroll(){
     return;
   }
 
-  if(Date.now() - lastAdShownAt < AD_COOLDOWN_MS){
-    showToast('Подождите немного перед следующей рекламой');
-    return;
-  }
-
   rerollBtn.classList.add('loading');
   const result = await requestRewardedAd('Посмотреть рекламу и получить другое задание?');
   rerollBtn.classList.remove('loading');
 
   if(result === 'success' || result === 'skipped'){
-    lastAdShownAt = Date.now();
     switchCategory(currentCategory, true);
     rerollsToday++;
     saveRerollsToday();
@@ -1822,26 +2379,19 @@ async function doReroll(){
 rerollBtn.addEventListener('click', doReroll);
 
 /* ============================================================
-   UNLOCK Сложное (только через рекламу)
+   UNLOCK Сложное
    ============================================================ */
 async function requestUnlock(cat){
   if(!appReady) return;
-  if(Date.now() - lastAdShownAt < AD_COOLDOWN_MS){
-    showToast('Подождите немного перед следующей рекламой');
-    return;
-  }
   const result = await requestRewardedAd('Открыть раздел «Сложное» до конца дня за просмотр рекламы?');
 
   if(result === 'success' || result === 'skipped'){
-    lastAdShownAt = Date.now();
     unlocked[cat] = true;
     updateLocks();
     switchCategory(cat);
     haptic('light');
     if(result === 'skipped') showToast('Раздел открыт');
-    saveUnlocks().then(ok => {
-      if(!ok) showToast('Не удалось сохранить на сервере');
-    });
+    saveUnlocks();
   } else if(result === 'closed'){
     showToast('Реклама закрыта — раздел не открыт');
   } else if(result === 'error'){
@@ -1896,7 +2446,7 @@ function renderCalendar(){
   const countEl = document.getElementById('calCount');
   if(!grid) return;
 
-  const now = new Date();
+  const now = new Date(Date.now() + timeOffset);
   const year = now.getFullYear();
   const month = now.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -1942,7 +2492,7 @@ function renderCalendar(){
     dotsEl.appendChild(dot);
   }
   if(streak === 0) hintEl.textContent = 'Выполняй задание каждый день';
-  else if(streak < 7) hintEl.textContent = (7 - streak) + ' ' + plural(7-streak,'день','дня','дней') + ' до награды +100 Q';
+  else if(streak < 7) hintEl.textContent = (7 - streak) + ' ' + plural(7-streak,'день','дня','дней') + ' до награды';
   else hintEl.textContent = 'Серия идёт — продолжай!';
 
   const listEl = document.getElementById('historyList');
@@ -1975,7 +2525,6 @@ function renderShop(){
   buyReroll.disabled = balance < PRICE_REROLL;
   buyReroll.textContent = PRICE_REROLL + ' Q';
 
-  // темы
   const themesList = document.getElementById('themesList');
   themesList.innerHTML = '';
   Object.entries(THEMES).forEach(([id, th]) => {
@@ -2001,9 +2550,16 @@ function renderShop(){
     themesList.appendChild(card);
   });
 
-  // рамки
   const framesList = document.getElementById('framesList');
   framesList.innerHTML = '';
+  const grads = {
+    wood:'linear-gradient(135deg,#8b5a2b,#4a2d10)',
+    stone:'linear-gradient(135deg,#9a9a9a,#4a4a4a)',
+    bronze:'linear-gradient(135deg,#d18b3f,#8b5a2b)',
+    silver:'linear-gradient(135deg,#e0e4ea,#8a94a5)',
+    gold:'linear-gradient(135deg,#ffd29a,#c89040)',
+    diamond:'linear-gradient(135deg,#8ef0ff,#3a7fc0)'
+  };
   Object.entries(FRAMES).forEach(([id, fr]) => {
     const owned = ownedFrames.includes(id);
     const equipped = currentFrame === id;
@@ -2011,21 +2567,9 @@ function renderShop(){
     card.className = 'shop-card';
     const prev = document.createElement('div');
     prev.className = 'sc-avatar-preview';
+    if(id !== 'none') prev.style.background = grads[id] || 'transparent';
     const inner = document.createElement('div');
     inner.className = 'inner';
-    if(id !== 'none'){
-      const t = FRAMES[id];
-      // preview background gradient
-      const grads = {
-        wood:'linear-gradient(135deg,#8b5a2b,#4a2d10)',
-        stone:'linear-gradient(135deg,#9a9a9a,#4a4a4a)',
-        bronze:'linear-gradient(135deg,#d18b3f,#8b5a2b)',
-        silver:'linear-gradient(135deg,#e0e4ea,#8a94a5)',
-        gold:'linear-gradient(135deg,#ffd29a,#c89040)',
-        diamond:'linear-gradient(135deg,#8ef0ff,#3a7fc0)'
-      };
-      prev.style.background = grads[id] || 'transparent';
-    }
     prev.appendChild(inner);
     card.appendChild(prev);
     const info = document.createElement('div');
@@ -2062,6 +2606,7 @@ function buyOrEquipTheme(id, price){
   saveOwnedThemes();
   saveCurrentTheme();
   updateBalanceUI();
+  updateMiningUI();
   applyTheme(currentTheme);
   renderShop();
   haptic('medium');
@@ -2086,6 +2631,7 @@ function buyOrEquipFrame(id, price){
   saveOwnedFrames();
   saveCurrentFrame();
   updateBalanceUI();
+  updateMiningUI();
   renderShop();
   renderProfileFrame();
   haptic('medium');
@@ -2099,6 +2645,7 @@ document.getElementById('buyReroll').addEventListener('click', () => {
   saveBalance();
   saveBonusRerolls();
   updateBalanceUI();
+  updateMiningUI();
   updateRerollUI();
   renderShop();
   haptic('light');
@@ -2109,29 +2656,49 @@ document.getElementById('buyReroll').addEventListener('click', () => {
    SHARE
    ============================================================ */
 document.getElementById('shareBtn').addEventListener('click', async () => {
-  sharedOnce = true;
-  saveSharedOnce();
+  const firstTime = !sharedOnce;
+  if(firstTime){
+    sharedOnce = true;
+    saveSharedOnce();
+  }
 
   const text =
     'Мой прогресс в ' + APP_NAME + '\n' +
     '🔥 Серия: ' + streak + ' ' + plural(streak,'день','дня','дней') + '\n' +
     '✦ Выполнено: ' + totalDone + '\n' +
+    '⛏ Добыча ур. ' + mining.level + '\n' +
     '⬤ Баланс: ' + balance + ' Q';
 
+  let shared = false;
   if(vkBridge){
     try{
       await vkSend('VKWebAppShare', { link: APP_URL, text: text });
-      return;
+      shared = true;
     }catch(e){}
-    try{
-      await vkSend('VKWebAppShowWallPostBox', {
-        message: text + '\n\n' + APP_URL,
-        attachments: APP_URL
-      });
-      return;
-    }catch(e){}
+    if(!shared){
+      try{
+        await vkSend('VKWebAppShowWallPostBox', {
+          message: text + '\n\n' + APP_URL,
+          attachments: APP_URL
+        });
+        shared = true;
+      }catch(e){}
+    }
   }
-  showToast('Шаринг доступен только в VK');
+
+  if(!shared){
+    showToast('Шаринг доступен только в VK');
+    return;
+  }
+
+  if(firstTime){
+    balance += SHARE_REWARD;
+    saveBalance();
+    updateBalanceUI();
+    updateMiningUI();
+    haptic('medium');
+    showToast('+' + SHARE_REWARD + ' Q за первый шаринг');
+  }
 });
 
 /* ============================================================
@@ -2162,39 +2729,65 @@ function initViewRestoreSync(){
       } else if(rerollsToday !== prevRerolls){
         updateRerollUI();
       }
+      updateMiningUI();
+      const active = document.querySelector('.screen.active');
+      if(active && active.dataset.screen === 'mining') renderMining();
     });
   });
 }
 
 /* ============================================================
+   SPLASH
+   ============================================================ */
+function hideSplash(){
+  const s = document.getElementById('splash');
+  if(!s) return;
+  s.classList.add('hide');
+  setTimeout(() => { if(s.parentNode) s.remove(); }, 500);
+}
+
+/* ============================================================
    START
    ============================================================ */
-function startApp(){
+async function initGameTime(){
+  if(!vkBridge) return;
+  try{
+    const p = await Promise.race([
+      vkSend('VKWebAppGetLaunchParams', {}, 1500),
+      new Promise(r => setTimeout(() => r(null), 1500))
+    ]);
+    if(p && p.vk_ts){
+      timeOffset = p.vk_ts * 1000 - Date.now();
+    }
+  }catch(e){}
+}
+
+async function startApp(){
   initVKBridge();
   initViewRestoreSync();
+  await initGameTime();
 
   loadProgressFromLocal();
   lastRenderedDay = dateKey();
   appReady = true;
   switchCategory('normal');
-
-  // аватар из VK
-  loadUserProfile();
+  hideSplash();
 
   loadProgress().then(() => {
     const cat = currentCategory;
     const serverIdx = dailyState[cat].idx;
     const serverRevealed = dailyState[cat].revealed;
     const serverDone = dailyState[cat].done;
-    const shownIdx = currentTaskIndex;
 
     const needsRedraw =
-      (serverIdx >= 0 && serverIdx !== shownIdx) ||
+      (serverIdx >= 0 && serverIdx !== dailyState[cat].idx) ||
       (serverRevealed && filmEl) ||
       serverDone;
 
     if(needsRedraw) switchCategory(cat);
     if(!isUnlocked(currentCategory)) switchCategory('normal');
+
+    return loadUserProfile();
   }).catch(e => {
     console.warn('[Start] VK sync failed:', e.message || e);
   });
