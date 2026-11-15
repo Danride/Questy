@@ -1055,8 +1055,6 @@ const PRICE_REROLL = 200;
 const HISTORY_MAX = 90;
 const SHARE_REWARD = 30;
 
-const AD_SKIP_AFTER_MS = 0;
-
 /* Добыча */
 const MINING_BASE_RATE = 1;
 const MINING_RATE_STEP = 0.1;
@@ -1424,7 +1422,14 @@ async function storageGetMultiple(keys){
     }catch(e){}
   }
   if(vkResponded){
-    keys.forEach(k => { if(result[k] == null) result[k] = ''; });
+    keys.forEach(k => {
+      if(result[k] == null || result[k] === ''){
+        try{
+          const local = localStorage.getItem('g_'+k);
+          result[k] = local !== null ? local : (result[k] || '');
+        }catch(e){result[k] = result[k] || '';}
+      }
+    });
     return result;
   }
   keys.forEach(k => {
@@ -1467,6 +1472,7 @@ let lastRenderedDay=dateKey();
 const usedToday={normal:new Set(), hard:new Set()};
 let rerollsToday = 0;
 let bonusRerolls = 0;
+let bonusRerollsDay = '';
 let taskMode = 'all';
 let personalGoals = [];
 let goalsFinished = 0;
@@ -1523,7 +1529,11 @@ function saveDailyState(){
 }
 function saveRerollsToday(){ queueStorageSet('rerolls_' + dateKey(), String(rerollsToday)); }
 function saveUnlocks(){ return queueStorageSet(unlocksKey(), JSON.stringify({hard: !!unlocked.hard})); }
-function saveBonusRerolls(){ queueStorageSet('bonus_rerolls', String(bonusRerolls)); }
+function saveBonusRerolls(){
+  bonusRerollsDay=dateKey();
+  queueStorageSet('bonus_rerolls', String(bonusRerolls));
+  queueStorageSet('bonus_rerolls_day', bonusRerollsDay);
+}
 function saveBalance(){ queueStorageSet('balance', String(balance)); }
 function saveStreak(){ queueStorageSet('streak', String(streak)); }
 function saveBestStreak(){ queueStorageSet('best_streak', String(bestStreak)); }
@@ -1639,7 +1649,7 @@ function computeMining(now){
 
   // сколько «реально» прошло (для защиты от перевода часов):
   // если разница сильно больше cap — считаем, что прошло ровно cap
-  const realElapsed = now - lastTick;
+  const realElapsed = Math.max(0, now - lastTick);
   const cappedElapsed = Math.min(realElapsed, capMs);
   const cappedEnd = lastTick + cappedElapsed;
   const totalMs = cappedElapsed;
@@ -1722,7 +1732,7 @@ async function activateMiningBoost(){
     return;
   }
   const result = await requestRewardedAd('Ускоритель ×2 к добыче на 2 часа за просмотр рекламы?');
-  if(result === 'success' || result === 'skipped'){
+  if(result === 'success'){
     const t0 = Date.now();
     mining.bonusStart = t0;
     mining.bonusEnd = t0 + MINING_BOOST_MS;
@@ -2007,6 +2017,8 @@ function loadProgressFromLocal(){
   totalDone = parseIntSafe(localStorage.getItem('g_total_done'), 0);
   totalHardDone = parseIntSafe(localStorage.getItem('g_total_hard_done'), 0);
   bonusRerolls = parseIntSafe(localStorage.getItem('g_bonus_rerolls'), 0);
+  bonusRerollsDay = localStorage.getItem('g_bonus_rerolls_day') || '';
+  if(bonusRerollsDay !== dateKey()) bonusRerolls = 0;
   lastDailyClaim = localStorage.getItem('g_last_daily_claim') || '';
   lastCompleteDate = localStorage.getItem('g_last_complete_date') || '';
   sharedOnce = localStorage.getItem('g_shared_once') === '1';
@@ -2047,7 +2059,7 @@ async function loadProgress(){
     'rerolls_' + dateKey(),
     unlocksKey(),
     'balance','streak','best_streak','total_done','total_hard_done',
-    'bonus_rerolls','last_daily_claim','last_complete_date',
+    'bonus_rerolls','bonus_rerolls_day','last_daily_claim','last_complete_date',
     'shared_once','owned_themes','current_theme',
     'owned_frames','current_frame','history','user_photo','user_name',
     'mining','task_mode','personal_goals','goals_finished'
@@ -2068,6 +2080,8 @@ async function loadProgress(){
   totalDone = parseIntSafe(data['total_done'], totalDone);
   totalHardDone = parseIntSafe(data['total_hard_done'], totalHardDone);
   bonusRerolls = parseIntSafe(data['bonus_rerolls'], bonusRerolls);
+  bonusRerollsDay = data['bonus_rerolls_day'] || '';
+  if(bonusRerollsDay !== dateKey()) bonusRerolls = 0;
   lastDailyClaim = data['last_daily_claim'] || lastDailyClaim;
   lastCompleteDate = data['last_complete_date'] || lastCompleteDate;
   sharedOnce = data['shared_once'] === '1' || sharedOnce;
@@ -2092,6 +2106,7 @@ async function loadProgress(){
     localStorage.setItem('g_total_done', String(totalDone));
     localStorage.setItem('g_total_hard_done', String(totalHardDone));
     localStorage.setItem('g_bonus_rerolls', String(bonusRerolls));
+    localStorage.setItem('g_bonus_rerolls_day', bonusRerollsDay);
     localStorage.setItem('g_last_daily_claim', lastDailyClaim);
     localStorage.setItem('g_last_complete_date', lastCompleteDate);
     localStorage.setItem('g_shared_once', sharedOnce?'1':'0');
@@ -2414,6 +2429,7 @@ function handleDone(){
   updateTaskActionsUI();
   updateStreakUI();
   updateProfileStats();
+  renderAchievements();
 }
 
 function handleSkip(){
@@ -2509,20 +2525,17 @@ function requestRewardedAd(questionText){
       if(act === 'watch'){
         bodyEl.innerHTML =
           '<span class="ad-loading">Загружаем рекламу<span class="dots"><span>.</span><span>.</span><span>.</span></span></span>';
-        actionsEl.innerHTML =
-          '<button class="modal-btn primary" data-act="skip">Пропустить и получить</button>';
-
-        if(vkBridge){
-          vkBridge.send('VKWebAppShowNativeAds', {ad_format:'reward'})
-            .then(res => { if(!settled) finish(res && res.result ? 'success' : 'closed'); })
-            .catch(() => { if(!settled) finish('error'); });
-        } else {
-          setTimeout(() => { if(!settled) finish('success'); }, 1500);
+        actionsEl.innerHTML = '';
+        if(!vkBridge){
+          finish('error');
+          return;
         }
+        // Награда только после подтверждённого результата от VK.
+        vkSend('VKWebAppShowNativeAds', {ad_format:'reward'}, 90000)
+          .then(res => finish(res && res.result === true ? 'success' : 'closed'))
+          .catch(() => finish('error'));
         return;
       }
-
-      if(act === 'skip'){ finish('skipped'); return; }
     };
   });
 }
@@ -2556,13 +2569,12 @@ async function doReroll(){
   const result = await requestRewardedAd('Посмотреть рекламу и получить другое задание?');
   rerollBtn.classList.remove('loading');
 
-  if(result === 'success' || result === 'skipped'){
+  if(result === 'success'){
     switchCategory(currentCategory, true);
     rerollsToday++;
     saveRerollsToday();
     updateRerollUI();
     haptic('light');
-    if(result === 'skipped') showToast('Задание получено');
   } else if(result === 'closed'){
     showToast('Реклама закрыта — попытка не списана');
   } else if(result === 'error'){
@@ -2578,12 +2590,11 @@ async function requestUnlock(cat){
   if(!appReady) return;
   const result = await requestRewardedAd('Открыть раздел «Сложное» до конца дня за просмотр рекламы?');
 
-  if(result === 'success' || result === 'skipped'){
+  if(result === 'success'){
     unlocked[cat] = true;
     updateLocks();
     switchCategory(cat);
     haptic('light');
-    if(result === 'skipped') showToast('Раздел открыт');
     saveUnlocks();
   } else if(result === 'closed'){
     showToast('Реклама закрыта — раздел не открыт');
@@ -2804,7 +2815,7 @@ function renderCalendar(){
     dotsEl.appendChild(dot);
   }
   if(streak === 0) hintEl.textContent = 'Выполняй задание каждый день';
-  else if(streak < 7) hintEl.textContent = (7 - streak) + ' ' + plural(7-streak,'день','дня','дней') + ' до награды';
+  else if(streak < 7) hintEl.textContent = (7 - streak) + ' ' + plural(7-streak,'день','дня','дней') + ' до серии из 7 дней';
   else hintEl.textContent = 'Серия идёт — продолжай!';
 
   const listEl = document.getElementById('historyList');
@@ -2969,11 +2980,6 @@ document.getElementById('buyReroll').addEventListener('click', () => {
    ============================================================ */
 document.getElementById('shareBtn').addEventListener('click', async () => {
   const firstTime = !sharedOnce;
-  if(firstTime){
-    sharedOnce = true;
-    saveSharedOnce();
-  }
-
   const text =
     'Мой прогресс в ' + APP_NAME + '\n' +
     '🔥 Серия: ' + streak + ' ' + plural(streak,'день','дня','дней') + '\n' +
@@ -3004,6 +3010,8 @@ document.getElementById('shareBtn').addEventListener('click', async () => {
   }
 
   if(firstTime){
+    sharedOnce = true;
+    saveSharedOnce();
     balance += SHARE_REWARD;
     saveBalance();
     updateBalanceUI();
@@ -3048,6 +3056,32 @@ function initViewRestoreSync(){
   });
 }
 
+/* Смена дня без перезапуска мини-приложения. */
+let daySyncing = false;
+async function checkDayChange(){
+  if(!appReady || daySyncing || lastRenderedDay === dateKey()) return;
+  daySyncing=true;
+  lastRenderedDay=dateKey();
+  try{
+    applyStateJson('');
+    applyRerollsRaw('');
+    applyUnlocksRaw('');
+    bonusRerolls=0;
+    saveBonusRerolls();
+    await loadProgress();
+    const nextCategory=isUnlocked(currentCategory)?currentCategory:'normal';
+    switchCategory(nextCategory);
+    refreshAll();
+    renderCalendar();
+    renderMining();
+  }catch(e){console.warn('[Day rollover]',e);}
+  finally{daySyncing=false;}
+}
+setInterval(checkDayChange,30000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState === 'visible') checkDayChange();
+});
+
 /* ============================================================
    SPLASH
    ============================================================ */
@@ -3088,15 +3122,13 @@ async function startApp(){
 
   loadProgress().then(() => {
     const cat = currentCategory;
-    const serverIdx = dailyState[cat].idx;
-    const serverRevealed = dailyState[cat].revealed;
-    const serverDone = dailyState[cat].done;
-
-    const needsRedraw =
-      (serverIdx >= 0 && serverIdx !== dailyState[cat].idx) ||
-      (serverRevealed && filmEl) ||
-      serverDone;
-
+    const serverState = dailyState[cat];
+    const shownTask = taskEl.textContent;
+    const serverTask = serverState.idx >= 0 ? CATEGORY_TASKS[cat][serverState.idx] : '';
+    const needsRedraw = shownTask !== serverTask ||
+      (serverState.revealed && filmEl) ||
+      (serverState.skipped && filmEl) ||
+      serverState.done;
     if(needsRedraw) switchCategory(cat);
     if(!isUnlocked(currentCategory)) switchCategory('normal');
 
