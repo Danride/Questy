@@ -56,6 +56,7 @@
 .av-history ol{padding:0;margin:7px 0 0;list-style:none;display:flex;flex-direction:column;gap:9px}
 .av-history li{display:flex;gap:8px;flex-direction:column;border-bottom:1px solid var(--line-soft);padding:0 0 9px}
 .av-history li span{font-size:9px;line-height:1.6}
+.av-history li p{font-size:8px;line-height:1.75;opacity:.78;white-space:pre-wrap}
 .av-history li small{font-size:8px;opacity:.6;line-height:1.5}
 .av-empty{border:1px dashed var(--line);border-radius:12px;padding:22px;text-align:center;font-size:10px;line-height:1.8;opacity:.65}
 @media(min-width:470px){.av-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
