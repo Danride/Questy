@@ -113,24 +113,18 @@ function renderProfileFrame(){
    ============================================================ */
 function updateTaskActionsUI(){
   const st = dailyState[currentCategory];
-  taskActions.classList.add('hidden');
-  taskStatus.classList.add('hidden');
-  taskStatus.classList.remove('ok');
+  const finished = !!(st.done || st.skipped);
 
-  if(st.done){
-    taskStatus.classList.remove('hidden');
-    taskStatus.classList.add('ok');
-    taskStatus.textContent = '✓ Выполнено';
-    return;
-  }
-  if(st.skipped){
-    taskStatus.classList.remove('hidden');
-    taskStatus.textContent = 'Пропущено · вернись завтра';
-    return;
-  }
-  if(st.revealed){
-    taskActions.classList.remove('hidden');
-  }
+  // После открытия задания всегда оставляем две кнопки.
+  // Выбранный ответ подсвечивается без отдельной статусной полоски.
+  taskActions.classList.toggle('hidden', !(st.revealed || finished));
+  taskActions.classList.toggle('is-resolved', finished);
+  btnDone.classList.toggle('selected', !!st.done);
+  btnSkip.classList.toggle('selected', !!st.skipped);
+  btnDone.disabled = finished;
+  btnSkip.disabled = finished;
+  btnDone.setAttribute('aria-pressed', st.done ? 'true' : 'false');
+  btnSkip.setAttribute('aria-pressed', st.skipped ? 'true' : 'false');
 }
 
 /* ============================================================

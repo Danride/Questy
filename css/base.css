@@ -258,13 +258,12 @@ button:focus-visible,[tabindex]:focus-visible{
 .btn-action.done{border-color:var(--accent);color:var(--accent);background:rgba(255,205,150,.06)}
 .btn-action.done:active{background:rgba(255,205,150,.18)}
 .btn-action.skip:active{background:rgba(255,255,255,.06)}
-.task-status{
-  width:100%;padding:12px;text-align:center;
-  font-size:11px;letter-spacing:.12em;text-transform:uppercase;
-  border-radius:14px;border:1px solid var(--line-soft);
-  color:rgba(245,239,226,.6);
-}
-.task-status.ok{border-color:var(--accent);color:var(--accent);background:rgba(255,205,150,.06)}
+/* Вместо статусной плашки остаются две кнопки; выбранная подсвечивается. */
+.task-actions.is-resolved .btn-action:not(.selected){opacity:.45}
+.task-actions.is-resolved .btn-action.selected{opacity:1}
+.btn-action.done.selected{border-color:var(--accent);color:var(--accent);background:rgba(255,205,150,.16)}
+.btn-action.skip.selected{border-color:var(--ink);color:var(--ink);background:rgba(255,255,255,.09)}
+.task-actions .btn-action:disabled{cursor:default}
 
 /* FILM */
 .film{
