@@ -29,6 +29,7 @@ function initViewRestoreSync(){
       updateMiningUI();
       const active = document.querySelector('.screen.active');
       if(active && active.dataset.screen === 'mining') renderMining();
+      syncAdventureStateFromVK();
     });
   });
 }
@@ -92,6 +93,7 @@ async function startApp(){
 
   migrateLegacyStorage();
   loadProgressFromLocal();
+  initAdventureLibrary();
   lastRenderedDay = dateKey();
   appReady = true;
   switchCategory('normal');
@@ -111,7 +113,7 @@ async function startApp(){
     if(!isUnlocked(currentCategory)) switchCategory('normal');
 
     return loadUserProfile();
-  }).catch(e => {
+  }).then(() => syncAdventureStateFromVK()).catch(e => {
     console.warn('[Start] VK sync failed:', e.message || e);
   });
 }
