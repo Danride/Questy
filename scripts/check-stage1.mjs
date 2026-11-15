@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const jsNames = ['core','content','state','migrations','mining','ui','daily','goals-achievements','calendar-shop','adventure-content','weekly-stories','adventures','bootstrap'];
-const cssNames = ['base','features','navigation','adventures'];
+const jsNames = ['core','content','state','migrations','mining','ui','daily','goals-achievements','calendar-shop','adventure-content','weekly-stories','marathon-content','marathons','adventures','bootstrap'];
+const cssNames = ['base','features','navigation','adventures','marathons'];
 const load = name => fs.readFileSync(name, 'utf8');
 const html = load('index.html');
 
