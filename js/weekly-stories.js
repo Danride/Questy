@@ -145,6 +145,23 @@ async function weeklyReroll(){
   }catch(e){console.warn('[Weekly stories reroll]',e);showToast('Не удалось обновить приключения');return false;}
   finally{weeklyBusy=false;adventureBusy=false;renderAdventures();}
 }
+function weeklyUnlockPanel(story){
+  if(story.premium)return '<div class="av-locked"><strong>Платное приключение</strong><p>Подключим покупки голосами VK на четвёртом этапе. Сейчас оплата недоступна.</p></div>';
+  if(weeklyCanAccess(story))return '';
+  const slot=weeklySlot(story.id);
+  if(slot===0 && !weeklyStories.freeClaimed){
+    return '<div class="av-locked"><strong>Бесплатный выбор недели</strong><p>Один сюжет можно открыть бесплатно раз в неделю.</p>'+
+      '<button class="av-primary" data-av-action="weekly-free">Открыть бесплатно</button></div>';
+  }
+  if(slot===1||slot===2){
+    return '<div class="av-locked"><strong>Приключение за '+WEEKLY_STORY_PRICE+' Q</strong>'+
+      '<p>История откроется навсегда. Покупка не заменяет оплату премиальных историй голосами VK.</p>'+
+      '<button class="av-primary" data-av-action="weekly-buy">Купить за '+WEEKLY_STORY_PRICE+' Q</button></div>';
+  }
+  return '<div class="av-locked"><strong>Недоступно на этой неделе</strong>'+
+    '<p>'+(slot===0?'Бесплатное приключение на эту неделю уже выбрано.':'Эта история сейчас не входит в еженедельную тройку.')+
+    ' Можно дождаться новой недели или обновить предложения за рекламу.</p></div>';
+}
 function weeklyOfferHtml(){
   weeklyEnsureCurrent();
   const items=weeklyStories.slots.map((id,index)=>{
