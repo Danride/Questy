@@ -149,6 +149,7 @@ function initAdventureLibrary(){
       }
     }
   });
+  initExtraAdventureActions();
   renderAdventures();
 }
 function adventureStatus(kind,id){
@@ -200,47 +201,48 @@ function adventureFilterSelect(name,label,options){
 function renderAdventureCatalog(){
   const root=document.getElementById('adventureApp');
   if(!root)return;
-  root.innerHTML='<div class="av-catalog">'+
-    '<div class="av-lead"><span class="av-star">✦</span><h2>Выбери приключение</h2><p>Испытания для одного, пары и компании. Без регистрации участников.</p></div>'+
-    ((adventureView.type==='all'||adventureView.type==='story') && adventureView.status==='all' && adventureView.access!=='premium' ? weeklyOfferHtml() : '')+
-    '<label class="av-search-label" for="adventureSearch">Поиск приключений</label>'+
-    '<input id="adventureSearch" class="av-search" type="search" maxlength="80" placeholder="Название или жанр..." value="'+adventureEscape(adventureView.query)+'">'+
-    '<div class="av-filters">'+
-      adventureFilterSelect('type','Тип',[['all','Все'],['quick','Быстрые'],['story','Истории']])+
-      adventureFilterSelect('mode','Игроки',[['all','Все'],['solo','Один'],['duo','Пара'],['group','Компания']])+
-      adventureFilterSelect('difficulty','Сложность',[['all','Любая'],['easy','Легко'],['medium','Средне'],['hard','Сложно']])+
-      adventureFilterSelect('duration','Время',[['all','Любое'],['short','До 10 мин'],['medium','11–25 мин'],['long','От 26 мин']])+
-      adventureFilterSelect('access','Доступ',[['all','Любой'],['free','Бесплатно'],['premium','Премиум']])+
-      adventureFilterSelect('status','Статус',[['all','Все'],['progress','Продолжить'],['done','Пройденные'],['favorites','Избранное']])+
-    '</div><div class="av-count" id="adventureCount"></div><div class="av-grid" id="adventureResults"></div></div>';
-  renderAdventureCards();
+  // Скрываем ВСЁ за пределами трех предложений недели. Никакого поиска,
+  // полного каталога, грядущих историй или предварительных спойлеров.
+  root.innerHTML='<div class="av-catalog av-only-three">'+weeklyOfferHtml()+'</div>';
 }
 function renderAdventureCards(){
-  const list=document.getElementById('adventureResults');
-  if(!list || adventureView.page!=='catalog')return;
-  const items=adventureCatalogItems();
-  document.getElementById('adventureCount').textContent=items.length+' '+plural(items.length,'приключение','приключения','приключений')+' найдено';
-  if(!items.length){
-    list.innerHTML='<div class="av-empty">Ничего не найдено. Измени фильтры или поисковый запрос.</div>';
-    return;
-  }
-  list.innerHTML=items.map(({kind,item})=>{
-    const fav=adventureFavorites.ids.includes(item.id);
-    const status=adventureStatus(kind,item.id);
-    const premium=kind==='story' && item.premium;
-    const label=kind==='quick'?'Испытание':'История';
-    const state=status==='progress'?'В процессе':status==='done'?'Пройдено':premium?'Премиум':'Бесплатно';
-    return '<article class="av-card">'+
-      '<div class="av-card-top"><span class="av-type">'+label+'</span>'+
-      '<button class="av-fav'+(fav?' is-fav':'')+'" data-av-action="favorite" data-kind="'+kind+'" data-id="'+item.id+'" aria-label="'+(fav?'Убрать из избранного':'Добавить в избранное')+'" aria-pressed="'+fav+'">'+(fav?'★':'☆')+'</button></div>'+
-      '<h3>'+adventureEscape(item.title)+'</h3>'+
-      '<p>'+adventureEscape(kind==='story'?item.description:item.text)+'</p>'+
-      '<div class="av-tags"><span>'+ADVENTURE_MODES[item.mode]+'</span><span>'+item.minutes+' мин</span><span>'+ADVENTURE_DIFFICULTIES[item.difficulty]+'</span></div>'+
-      '<div class="av-card-bottom"><span class="av-status'+(premium?' av-premium':'')+'">'+(premium && status==='new'?'✦ ':'')+state+'</span>'+
-      '<button class="av-open" data-av-action="open" data-kind="'+kind+'" data-id="'+item.id+'">'+(status==='progress'?'Продолжить':'Открыть')+'</button></div>'+
-    '</article>';
-  }).join('');
+  // Каталог намеренно скрыт: на экране всегда ровно три приключения.
+  // Предыдущий прогресс сохраняем, но показываем из раздела «Мои истории» профиля.
+  return;
 }
+function openRandomQuickChallenge(){
+  if(!QUESTY_CHALLENGES.length)return;
+  const pool=QUESTY_CHALLENGES.filter(q=>!adventureQuickResults.done[q.id]);
+  const candidates=pool.length?pool:QUESTY_CHALLENGES;
+  const q=candidates[Math.floor(Math.random()*candidates.length)];
+  navigateTo('adventures');
+  adventureOpen('quick',q.id);
+}
+function renderMyAdventures(){
+  const host=document.getElementById('myAdventures');
+  if(!host)return;
+  const owned=QUESTY_STORIES.filter(story=>weeklyCanAccess(story));
+  host.innerHTML=owned.length?owned.map(story=>{
+    const p=adventureStoryProgress[story.id];
+    const status=p && p.active?'Продолжить':p && p.runs?'Пройти снова':'Открыть';
+    return '<button type="button" class="my-story-button" data-story-id="'+adventureEscape(story.id)+'">'+
+      '<span>'+adventureEscape(story.title)+'</span><small>'+status+'</small></button>';
+  }).join(''):'<p class="av-note">Пока нет открытых историй. Выбери одну в разделе «Приключения».</p>';
+}
+function initExtraAdventureActions(){
+  const my=document.getElementById('myAdventures');
+  if(my)my.addEventListener('click',event=>{
+    const btn=event.target.closest('button[data-story-id]');
+    if(!btn||!my.contains(btn))return;
+    const story=adventureStoryById(btn.dataset.storyId);
+    if(!weeklyCanAccess(story))return;
+    navigateTo('adventures');
+    adventureOpen('story',story.id);
+  });
+  const random=document.getElementById('randomQuickBtn');
+  if(random)random.addEventListener('click',openRandomQuickChallenge);
+}
+
 function adventureDetailHeader(title,subtitle){
   return '<div class="av-detail-head"><button type="button" class="av-back" data-av-action="back">← Каталог</button>'+
     '<div class="av-detail-title"><h2>'+adventureEscape(title)+'</h2><p>'+adventureEscape(subtitle)+'</p></div></div>';
