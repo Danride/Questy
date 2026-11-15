@@ -598,6 +598,58 @@ button:focus-visible,[tabindex]:focus-visible{
 }
 .share-btn:active{background:rgba(255,205,150,.18)}
 
+/* ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ: тот же визуальный язык */
+.task-mode-row{width:100%;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;border:1px solid var(--line-soft);border-radius:12px;padding:8px 11px}
+.task-mode-row label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.task-mode-row select,.goal-create-actions select{background:var(--bg);color:var(--ink);
+  border:1px solid var(--line);border-radius:8px;padding:8px 9px;
+  font-family:inherit;font-size:10px;max-width:64%;cursor:pointer}
+.goals-section,.achievements-section{width:100%;display:flex;flex-direction:column;gap:10px}
+.goals-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.goals-counter{font-size:9px;color:var(--accent)}
+.goal-creator{border:1px solid var(--line-soft);border-radius:14px;
+  padding:12px;display:flex;flex-direction:column;gap:10px;text-align:left}
+.goal-creator label{color:var(--ink);font-size:10px}
+.goal-creator input{width:100%;min-width:0;padding:11px;border-radius:10px;
+  background:rgba(255,255,255,.025);border:1px solid var(--line);color:var(--ink);
+  font-family:inherit;font-size:11px;user-select:text;-webkit-user-select:text}
+.goal-creator input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.goal-create-actions{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.goals-list{display:flex;flex-direction:column;gap:8px}
+.goal-item{border:1px solid var(--line-soft);border-radius:14px;padding:12px;
+  display:flex;flex-direction:column;gap:9px;text-align:left}
+.goal-item.done{border-color:var(--accent-soft)}
+.goal-item-top{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
+.goal-name{font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.goal-progress{font-size:10px;color:var(--accent);white-space:nowrap}
+.goal-bar{width:100%;height:5px;background:var(--line-soft);border-radius:5px;overflow:hidden}
+.goal-bar-fill{height:100%;background:var(--accent);border-radius:5px}
+.goal-buttons{display:flex;gap:8px}
+.goal-buttons button{border:1px solid var(--line);border-radius:9px;padding:8px;
+  background:transparent;color:var(--ink);font-family:inherit;font-size:9px;cursor:pointer}
+.goal-buttons button:first-child{flex:1;border-color:var(--accent);color:var(--accent)}
+.goal-buttons button:disabled{opacity:.4;pointer-events:none}
+.goals-note{font-size:9px;line-height:1.5;color:var(--ink);opacity:.6;text-align:left}
+.achievements-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.achievement{border:1px solid var(--line-soft);border-radius:12px;padding:12px 10px;
+  display:flex;align-items:flex-start;flex-direction:column;gap:6px;text-align:left;min-height:92px}
+.achievement.locked{opacity:.45}
+.achievement.earned{border-color:var(--accent)}
+.achievement-icon{font-size:18px;color:var(--accent)}
+.achievement-name{font-size:10px;font-weight:700}
+.achievement-desc{font-size:9px;line-height:1.4;color:var(--ink);opacity:.65}
+.welcome-overlay{position:fixed;inset:0;z-index:400;background:rgba(5,5,8,.92);
+  padding:20px;display:flex;align-items:center;justify-content:center;overflow-y:auto}
+.welcome-overlay[hidden]{display:none}
+.welcome-card{max-width:390px;width:100%;padding:24px 20px;border:1px solid var(--accent);
+  border-radius:18px;background:var(--bg);display:flex;flex-direction:column;gap:15px}
+.welcome-mark{font-size:40px;color:var(--accent)}
+.welcome-card h2{font-size:16px;line-height:1.5}
+.welcome-card p{font-size:11px;line-height:1.8;text-align:left}
+.welcome-card .welcome-note{font-size:9px;opacity:.7}
+.welcome-card button{flex:none;opacity:1;animation:none}
+@media(max-width:340px){.goal-create-actions{flex-wrap:wrap}.goal-create-actions select{max-width:100%}}
 /* BOTTOM NAV */
 .bottom-nav{
   flex-shrink:0;display:flex;align-items:center;justify-content:space-around;
@@ -761,6 +813,18 @@ button:focus-visible,[tabindex]:focus-visible{
         <button class="tab" data-cat="hard"><span>Сложное</span></button>
       </div>
 
+      <div class="task-mode-row">
+        <label for="taskMode">Тематика</label>
+        <select id="taskMode" aria-label="Тематика будущих заданий">
+          <option value="all">Любая</option>
+          <option value="social">Общение</option>
+          <option value="creative">Творчество</option>
+          <option value="home">Дома</option>
+          <option value="outside">На улице</option>
+          <option value="growth">Развитие</option>
+        </select>
+      </div>
+
       <div class="task-row">
         <div class="task-wrap" id="taskWrap">
           <div class="task" id="task"></div>
@@ -852,8 +916,33 @@ button:focus-visible,[tabindex]:focus-visible{
         <div class="history-title">История</div>
         <div id="historyList"></div>
       </div>
+
+      <div class="goals-section">
+        <div class="goals-head">
+          <div class="history-title">Мои цели</div>
+          <span class="goals-counter" id="goalsCounter"></span>
+        </div>
+        <div class="goal-creator">
+          <label for="goalTitle">Чего хочешь добиться?</label>
+          <input id="goalTitle" maxlength="80" placeholder="Например: прочитать 3 книги" autocomplete="off">
+          <div class="goal-create-actions">
+            <select id="goalTarget" aria-label="Количество шагов">
+              <option value="1">1 шаг</option>
+              <option value="3" selected>3 шага</option>
+              <option value="5">5 шагов</option>
+              <option value="7">7 шагов</option>
+              <option value="10">10 шагов</option>
+              <option value="30">30 шагов</option>
+            </select>
+            <button class="sc-buy" id="goalAdd">Создать цель</button>
+          </div>
+        </div>
+        <div id="goalsList" class="goals-list"></div>
+        <p class="goals-note">Отмечай шаги в своём темпе. За них не начисляется Q.</p>
+      </div>
     </section>
 
+    <!-- Свои цели живут в календаре, не занимая новую вкладку -->
     <!-- SHOP -->
     <section class="screen" data-screen="shop">
       <div class="screen-title">Лавка</div>
@@ -909,6 +998,14 @@ button:focus-visible,[tabindex]:focus-visible{
         <div class="stat-row"><span>Уровень добычи</span><span id="profileMiningLvl">1</span></div>
       </div>
 
+      <div class="achievements-section">
+        <div class="goals-head">
+          <div class="history-title">Достижения</div>
+          <span id="achievementsCounter" class="goals-counter"></span>
+        </div>
+        <div id="achievementsList" class="achievements-grid"></div>
+      </div>
+
       <button class="share-btn" id="shareBtn">Поделиться прогрессом</button>
     </section>
 
@@ -932,6 +1029,17 @@ button:focus-visible,[tabindex]:focus-visible{
     <div class="ad-modal-title" id="adModalTitle">Реклама</div>
     <div class="ad-modal-body" id="adModalBody"></div>
     <div class="ad-modal-actions" id="adModalActions"></div>
+  </div>
+</div>
+
+<div class="welcome-overlay" id="welcomeOverlay" hidden>
+  <div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <div class="welcome-mark" aria-hidden="true">✦</div>
+    <h2 id="welcomeTitle">Твой день — твой квест</h2>
+    <p>Открывай случайное задание, пробуй новое и отмечай события, которые хочется запомнить.</p>
+    <p>Создавай личные цели в календаре, собирай достижения и выбирай подходящую тематику заданий.</p>
+    <p class="welcome-note">Q можно собирать в разделе «Добыча» и тратить на оформление. За отметку «Сделал» монеты не выдаются.</p>
+    <button id="welcomeStart" class="btn-action done">Начать приключение</button>
   </div>
 </div>
 
@@ -1122,6 +1230,74 @@ const TASKS_HARD=[
 ];
 const CATEGORY_TASKS={normal:TASKS_NORMAL, hard:TASKS_HARD};
 
+
+/* НОВЫЕ НАПРАВЛЕНИЯ: задания не дают монеты за самоподтверждение. */
+const TASK_EXTRAS = {
+  normal:[
+    {mode:'social',text:'Напиши другу, с которым давно не общался'},
+    {mode:'social',text:'Спроси знакомого о его лучшем воспоминании'},
+    {mode:'social',text:'Похвали чью-то работу'},
+    {mode:'social',text:'Предложи близкому выбрать песню для вас двоих'},
+    {mode:'social',text:'Отправь голосовое сообщение с благодарностью'},
+    {mode:'creative',text:'Придумай название воображаемого города'},
+    {mode:'creative',text:'Нарисуй героя за пять минут'},
+    {mode:'creative',text:'Сделай фото необычной тени'},
+    {mode:'creative',text:'Придумай историю из трёх предложений'},
+    {mode:'creative',text:'Придумай смешное название для кафе'},
+    {mode:'home',text:'Наведи порядок в одном ящике'},
+    {mode:'home',text:'Приготовь необычный чай'},
+    {mode:'home',text:'Переставь одну вещь, чтобы сделать комнату уютнее'},
+    {mode:'home',text:'Найди вещь, которую давно хотел починить'},
+    {mode:'home',text:'Устрой десять минут без экрана'},
+    {mode:'outside',text:'Найди необычную вывеску и сфотографируй её'},
+    {mode:'outside',text:'Пройди знакомый путь новым маршрутом'},
+    {mode:'outside',text:'Найди три разных дерева вокруг себя'},
+    {mode:'outside',text:'Сфотографируй интересное отражение'},
+    {mode:'outside',text:'Открой для себя новый двор или сквер'},
+    {mode:'growth',text:'Выучи три слова на другом языке'},
+    {mode:'growth',text:'Запиши одну привычку, которую хочешь развить'},
+    {mode:'growth',text:'Прочитай пять страниц книги'},
+    {mode:'growth',text:'Выучи короткую разминку на одну минуту'},
+    {mode:'growth',text:'Выбери одну маленькую цель на завтра'}
+  ],
+  hard:[
+    {mode:'social',text:'Предложи другу совместное небольшое приключение на выходных'},
+    {mode:'social',text:'Познакомься с интересным человеком в комфортной обстановке'},
+    {mode:'social',text:'Помоги знакомому с делом хотя бы двадцать минут'},
+    {mode:'social',text:'Расскажи близкому, что особенно ценишь в нём'},
+    {mode:'social',text:'Поговори с другом полчаса, не отвлекаясь на телефон'},
+    {mode:'creative',text:'Нарисуй комикс из четырёх кадров'},
+    {mode:'creative',text:'Напиши мини-рассказ на триста слов'},
+    {mode:'creative',text:'Создай короткий ритм из подручных звуков'},
+    {mode:'creative',text:'Сними минутное видео на одну тему'},
+    {mode:'creative',text:'Придумай настольную игру с тремя правилами'},
+    {mode:'home',text:'Разбери полку и отдели вещи для передачи другим'},
+    {mode:'home',text:'Приготовь новое блюдо по рецепту'},
+    {mode:'home',text:'Организуй уютный уголок отдыха без покупок'},
+    {mode:'home',text:'Отложи развлекательный экран на два часа'},
+    {mode:'home',text:'Наведи порядок в небольшой части комнаты'},
+    {mode:'outside',text:'Пройди пять километров пешком в комфортном темпе'},
+    {mode:'outside',text:'Посети новое общественное место в своём районе'},
+    {mode:'outside',text:'Сделай пять фотографий своего города'},
+    {mode:'outside',text:'Найди новое бесплатное место для прогулки'},
+    {mode:'outside',text:'Проведи час на свежем воздухе, если погода позволяет'},
+    {mode:'growth',text:'Изучи тему полчаса и перескажи её своими словами'},
+    {mode:'growth',text:'Составь план на неделю из трёх реальных шагов'},
+    {mode:'growth',text:'Прочитай двадцать страниц книги'},
+    {mode:'growth',text:'Выучи десять новых слов и повтори их'},
+    {mode:'growth',text:'Освой небольшой навык по уроку и примени его'}
+  ]
+};
+const ORIGINAL_TASK_COUNT = {normal:TASKS_NORMAL.length,hard:TASKS_HARD.length};
+TASKS_NORMAL.push(...TASK_EXTRAS.normal.map(x=>x.text));
+TASKS_HARD.push(...TASK_EXTRAS.hard.map(x=>x.text));
+function taskPool(cat){
+  const all=CATEGORY_TASKS[cat].map((_,i)=>i);
+  if(taskMode==='all') return all;
+  const filtered=TASK_EXTRAS[cat].flatMap((task,i)=>task.mode===taskMode?[ORIGINAL_TASK_COUNT[cat]+i]:[]);
+  return filtered.length?filtered:all;
+}
+
 /* ============================================================
    ТЕМЫ
    ============================================================ */
@@ -1291,6 +1467,9 @@ let lastRenderedDay=dateKey();
 const usedToday={normal:new Set(), hard:new Set()};
 let rerollsToday = 0;
 let bonusRerolls = 0;
+let taskMode = 'all';
+let personalGoals = [];
+let goalsFinished = 0;
 
 let balance = 0;
 let streak = 0;
@@ -1358,6 +1537,9 @@ function saveCurrentTheme(){ queueStorageSet('current_theme', currentTheme); }
 function saveOwnedFrames(){ queueStorageSet('owned_frames', JSON.stringify(ownedFrames)); }
 function saveCurrentFrame(){ queueStorageSet('current_frame', currentFrame); }
 function saveHistory(){ queueStorageSet('history', JSON.stringify(history.slice(-HISTORY_MAX))); }
+function saveTaskMode(){ queueStorageSet('task_mode', taskMode); }
+function saveGoals(){ queueStorageSet('personal_goals', JSON.stringify(personalGoals)); }
+function saveGoalsFinished(){ queueStorageSet('goals_finished', String(goalsFinished)); }
 function saveMining(){
   queueStorageSet('mining', JSON.stringify({
     level: mining.level,
@@ -1803,8 +1985,8 @@ bottomNav.addEventListener('click', (e) => {
   const target = btn.dataset.screen;
   [...bottomNav.querySelectorAll('button')].forEach(b => b.classList.toggle('active', b === btn));
   screens.forEach(s => s.classList.toggle('active', s.dataset.screen === target));
-  if(target === 'calendar') renderCalendar();
-  if(target === 'profile') { updateProfileStats(); updateStreakUI(); updateBalanceUI(); renderProfileAvatar(); renderProfileFrame(); }
+  if(target === 'calendar') { renderCalendar(); renderGoals(); }
+  if(target === 'profile') { updateProfileStats(); updateStreakUI(); updateBalanceUI(); renderProfileAvatar(); renderProfileFrame(); renderAchievements(); }
   if(target === 'shop') renderShop();
   if(target === 'mining') { updateMiningUI(); renderMining(); }
   haptic('light');
@@ -1830,6 +2012,9 @@ function loadProgressFromLocal(){
   sharedOnce = localStorage.getItem('g_shared_once') === '1';
   userPhoto = localStorage.getItem('g_user_photo') || '';
   userName = localStorage.getItem('g_user_name') || 'Игрок 360';
+  taskMode = localStorage.getItem('g_task_mode') || 'all';
+  applyGoalsRaw(localStorage.getItem('g_personal_goals') || '');
+  goalsFinished = Math.max(0, parseIntSafe(localStorage.getItem('g_goals_finished'), 0));
 
   try{
     const ot = localStorage.getItem('g_owned_themes');
@@ -1865,7 +2050,7 @@ async function loadProgress(){
     'bonus_rerolls','last_daily_claim','last_complete_date',
     'shared_once','owned_themes','current_theme',
     'owned_frames','current_frame','history','user_photo','user_name',
-    'mining'
+    'mining','task_mode','personal_goals','goals_finished'
   ];
   const data = await storageGetMultiple(keys);
 
@@ -1873,6 +2058,9 @@ async function loadProgress(){
   applyRerollsRaw(data['rerolls_' + dateKey()]);
   applyUnlocksRaw(data[unlocksKey()]);
   applyMiningRaw(data['mining']);
+  taskMode = data['task_mode'] || taskMode;
+  applyGoalsRaw(data['personal_goals'] || '');
+  goalsFinished = Math.max(0, parseIntSafe(data['goals_finished'], goalsFinished));
 
   balance = parseIntSafe(data['balance'], balance);
   streak = parseIntSafe(data['streak'], streak);
@@ -1913,6 +2101,9 @@ async function loadProgress(){
     localStorage.setItem('g_current_frame', currentFrame);
     localStorage.setItem('g_history', JSON.stringify(history));
     localStorage.setItem('g_mining', JSON.stringify(mining));
+    localStorage.setItem('g_task_mode', taskMode);
+    localStorage.setItem('g_personal_goals', JSON.stringify(personalGoals));
+    localStorage.setItem('g_goals_finished', String(goalsFinished));
     if(userPhoto) localStorage.setItem('g_user_photo', userPhoto);
     if(userName) localStorage.setItem('g_user_name', userName);
   }catch(e){}
@@ -1960,6 +2151,10 @@ function refreshAll(){
   renderProfileAvatar();
   renderProfileFrame();
   updateUserName();
+  renderAchievements();
+  renderGoals();
+  const modeSelect = document.getElementById('taskMode');
+  if(modeSelect) modeSelect.value = taskMode;
 }
 
 function reconcileUsedToday(){
@@ -1992,18 +2187,15 @@ function maybeResetStreak(){
    PICK TASK
    ============================================================ */
 function pickTaskIndex(cat, excludeIndex=-1){
-  const list=CATEGORY_TASKS[cat];
+  const pool = taskPool(cat);
   const used=usedToday[cat];
-  if(used.size >= list.length){
-    used.clear();
+  if(pool.every(i=>used.has(i))){
+    pool.forEach(i=>used.delete(i));
     if(excludeIndex>=0) used.add(excludeIndex);
   }
-  const available=[];
-  for(let i=0;i<list.length;i++){
-    if(i!==excludeIndex && !used.has(i)) available.push(i);
-  }
+  const available=pool.filter(i=>i!==excludeIndex && !used.has(i));
   if(available.length===0){
-    for(let i=0;i<list.length;i++){ if(i!==excludeIndex) available.push(i); }
+    pool.forEach(i=>{if(i!==excludeIndex) available.push(i);});
   }
   const idx=available[Math.floor(Math.random()*available.length)];
   used.add(idx);
@@ -2268,7 +2460,8 @@ function switchCategory(cat, forceNew=false){
     saveDailyState();
   } else {
     if(st.idx < 0){
-      st.idx = seededIndex(dateKey()+':'+cat, list.length);
+      const pool = taskPool(cat);
+      st.idx = pool[seededIndex(dateKey()+':'+cat+':'+taskMode, pool.length)];
       usedToday[cat].add(st.idx);
       saveDailyState();
     } else {
@@ -2437,6 +2630,125 @@ async function syncUnlocksFromVK(){
   }catch(e){}
 }
 
+
+/* Подбор настроения применяется к следующему заданию без бесплатного обхода рекламы. */
+document.getElementById('taskMode').addEventListener('change', e=>{
+  const valid=['all','social','creative','home','outside','growth'];
+  taskMode=valid.includes(e.target.value)?e.target.value:'all';
+  saveTaskMode();
+  showToast('Тематика применится к следующему заданию');
+});
+
+function applyGoalsRaw(raw){
+  personalGoals=[];
+  try{
+    const arr=JSON.parse(raw);
+    if(Array.isArray(arr)){
+      personalGoals=arr.filter(g=>g && typeof g.name==='string' && g.name.trim())
+        .slice(-60).map(g=>({
+          id:String(g.id).slice(0,60),
+          name:g.name.slice(0,80),
+          target:Math.min(100,Math.max(1,parseInt(g.target,10)||1)),
+          progress:Math.max(0,parseInt(g.progress,10)||0),
+          created:typeof g.created==='string'?g.created:dateKey()
+        })).map(g=>({...g,progress:Math.min(g.progress,g.target)}));
+    }
+  }catch(e){}
+}
+function renderGoals(){
+  const host=document.getElementById('goalsList');
+  if(!host) return;
+  host.innerHTML='';
+  const active=personalGoals.filter(g=>g.progress<g.target).length;
+  document.getElementById('goalsCounter').textContent=active+' активных';
+  if(!personalGoals.length){
+    const empty=document.createElement('p');
+    empty.className='goals-note';
+    empty.textContent='Пока нет целей. Добавь одну, чтобы отслеживать маленькие шаги.';
+    host.appendChild(empty);
+  }
+  personalGoals.slice().reverse().forEach(g=>{
+    const row=document.createElement('div');row.className='goal-item';
+    if(g.progress>=g.target) row.classList.add('done');
+    const top=document.createElement('div');top.className='goal-item-top';
+    const title=document.createElement('div');title.className='goal-name';title.textContent=g.name;
+    const count=document.createElement('div');count.className='goal-progress';
+    count.textContent=g.progress>=g.target?'✓ Готово':g.progress+' / '+g.target;
+    top.append(title,count);
+    const track=document.createElement('div');track.className='goal-bar';
+    const fill=document.createElement('div');fill.className='goal-bar-fill';
+    fill.style.width=(g.progress/g.target*100)+'%';track.appendChild(fill);
+    const actions=document.createElement('div');actions.className='goal-buttons';
+    const plus=document.createElement('button');plus.textContent='+1 шаг';
+    plus.dataset.action='advance';plus.dataset.id=g.id;plus.disabled=g.progress>=g.target;
+    const del=document.createElement('button');del.textContent='Удалить';
+    del.dataset.action='delete';del.dataset.id=g.id;
+    actions.append(plus,del);
+    row.append(top,track,actions);
+    host.appendChild(row);
+  });
+}
+function renderAchievements(){
+  const host=document.getElementById('achievementsList');if(!host)return;
+  host.innerHTML='';
+  const items=[
+    ['✦','Первый шаг','Выполни 1 задание',totalDone>=1],
+    ['◆','Привычка','Выполни 10 заданий',totalDone>=10],
+    ['★','Опытный','Выполни 30 заданий',totalDone>=30],
+    ['✧','Смелый','Выполни 5 сложных заданий',totalHardDone>=5],
+    ['◈','Неделя','Серия из 7 дней',bestStreak>=7],
+    ['✴','Месяц','Серия из 30 дней',bestStreak>=30],
+    ['⬡','Целеустремлённый','Доведи 3 личные цели до конца',goalsFinished>=3],
+    ['◇','Коллекционер','Выполни 60 заданий',totalDone>=60]
+  ];
+  document.getElementById('achievementsCounter').textContent=items.filter(x=>x[3]).length+' / '+items.length;
+  items.forEach(a=>{
+    const card=document.createElement('div');card.className='achievement '+(a[3]?'earned':'locked');
+    const icon=document.createElement('div');icon.className='achievement-icon';icon.textContent=a[0];
+    const name=document.createElement('div');name.className='achievement-name';name.textContent=a[1];
+    const desc=document.createElement('div');desc.className='achievement-desc';desc.textContent=a[2];
+    card.append(icon,name,desc);host.appendChild(card);
+  });
+}
+document.getElementById('goalAdd').addEventListener('click',()=>{
+  if(!appReady)return;
+  const input=document.getElementById('goalTitle');
+  const name=input.value.trim().replace(/\s+/g,' ');
+  if(!name || name.length>80){showToast('Введите название цели до 80 символов');return;}
+  const active=personalGoals.filter(g=>g.progress<g.target).length;
+  if(active>=12){showToast('Можно вести не более 12 активных целей');return;}
+  const target=parseInt(document.getElementById('goalTarget').value,10)||3;
+  personalGoals.push({id:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8),
+    name,target,progress:0,created:dateKey()});
+  saveGoals();input.value='';renderGoals();showToast('Цель добавлена');
+});
+document.getElementById('goalTitle').addEventListener('keydown',e=>{
+  if(e.key==='Enter')document.getElementById('goalAdd').click();
+});
+document.getElementById('goalsList').addEventListener('click',e=>{
+  const btn=e.target.closest('button[data-action]');if(!btn || !appReady)return;
+  const i=personalGoals.findIndex(g=>g.id===btn.dataset.id);
+  if(i<0)return;
+  const g=personalGoals[i];
+  if(btn.dataset.action==='advance' && g.progress<g.target){
+    g.progress++;
+    if(g.progress===g.target){
+      goalsFinished++;saveGoalsFinished();renderAchievements();showToast('Цель достигнута!');
+    }else showToast('Шаг отмечен');
+  }else if(btn.dataset.action==='delete'){
+    personalGoals.splice(i,1);
+    showToast('Цель удалена');
+  }else return;
+  saveGoals();renderGoals();
+});
+function showWelcomeIfNeeded(){
+  let seen=false;try{seen=localStorage.getItem('g_welcome_seen')==='1'}catch(e){}
+  if(!seen) document.getElementById('welcomeOverlay').hidden=false;
+}
+document.getElementById('welcomeStart').addEventListener('click',()=>{
+  document.getElementById('welcomeOverlay').hidden=true;
+  try{localStorage.setItem('g_welcome_seen','1')}catch(e){}
+});
 /* ============================================================
    CALENDAR
    ============================================================ */
@@ -2772,6 +3084,7 @@ async function startApp(){
   appReady = true;
   switchCategory('normal');
   hideSplash();
+  showWelcomeIfNeeded();
 
   loadProgress().then(() => {
     const cat = currentCategory;
