@@ -84,7 +84,6 @@ const rerollLbl=document.getElementById('rerollLbl');
 const taskActions=document.getElementById('taskActions');
 const btnDone=document.getElementById('btnDone');
 const btnSkip=document.getElementById('btnSkip');
-const taskStatus=document.getElementById('taskStatus');
 const balanceValueEl=document.getElementById('balanceValue');
 const streakValueEl=document.getElementById('streakValue');
 const giftBtn=document.getElementById('giftBtn');
