@@ -163,6 +163,7 @@ function navigateTo(target){
   if(target === 'calendar'){ renderCalendar(); renderGoals(); }
   if(target === 'profile'){ updateProfileStats(); updateStreakUI(); updateBalanceUI(); renderProfileAvatar(); renderProfileFrame(); renderAchievements(); }
   if(target === 'shop') renderShop();
+  if(target === 'adventures') renderAdventures();
   if(target === 'mining'){ updateMiningUI(); renderMining(); }
   haptic('light');
 }

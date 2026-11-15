@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/features.css">
 <link rel="stylesheet" href="css/navigation.css">
+<link rel="stylesheet" href="css/adventures.css">
 </head>
 <body>
 
@@ -107,14 +108,10 @@
       <div class="home-actions"><button type="button" id="openMiningButton" class="home-mining-btn">✦ Добыча Q</button></div>
     </section>
 
-    <!-- ADVENTURES (stage 2: catalog + adventure engine) -->
+    <!-- ADVENTURES -->
     <section class="screen" data-screen="adventures">
       <div class="screen-title">Приключения</div>
-      <div class="adventures-coming">
-        <span class="adventures-symbol" aria-hidden="true">✦</span>
-        <h2>Библиотека приключений</h2>
-        <p>Раздел готов к наполнению. Сюжетные истории, быстрые испытания и марафоны появятся на следующем этапе разработки.</p>
-      </div>
+      <div id="adventureApp" aria-label="Каталог приключений"></div>
     </section>
 
     <!-- MINING -->
@@ -328,6 +325,8 @@
 <script src="js/daily.js"></script>
 <script src="js/goals-achievements.js"></script>
 <script src="js/calendar-shop.js"></script>
+<script src="js/adventure-content.js"></script>
+<script src="js/adventures.js"></script>
 <script src="js/bootstrap.js"></script>
 </body>
 </html>
