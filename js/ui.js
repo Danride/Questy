@@ -160,8 +160,8 @@ function navigateTo(target){
   const selectedNav = target === 'mining' ? 'task' : target;
   bottomNav.querySelectorAll('button[data-screen]').forEach(b => b.classList.toggle('active', b.dataset.screen === selectedNav));
   screens.forEach(s => s.classList.toggle('active', s.dataset.screen === target));
-  if(target === 'calendar'){ renderCalendar(); renderGoals(); }
-  if(target === 'profile'){ updateProfileStats(); updateStreakUI(); updateBalanceUI(); renderProfileAvatar(); renderProfileFrame(); renderAchievements(); }
+  if(target === 'calendar'){ renderCalendar(); renderGoals(); renderMarathons(); }
+  if(target === 'profile'){ updateProfileStats(); updateStreakUI(); updateBalanceUI(); renderProfileAvatar(); renderProfileFrame(); renderAchievements(); renderMyAdventures(); }
   if(target === 'shop') renderShop();
   if(target === 'adventures') renderAdventures();
   if(target === 'mining'){ updateMiningUI(); renderMining(); }
