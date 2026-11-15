@@ -1,0 +1,15 @@
+name: Questy stage 1 checks
+on:
+  pull_request:
+  push:
+    branches:
+      - feature/questy-2-stage1-architecture
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-stage1.mjs
