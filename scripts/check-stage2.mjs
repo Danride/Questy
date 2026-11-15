@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 const load = file => fs.readFileSync(file,'utf8');
 const html=load('index.html');
 assert.ok(html.includes('id="adventureApp"') && html.includes('css/adventures.css'));
-assert.ok(html.indexOf('js/adventure-content.js') < html.indexOf('js/adventures.js'));
+assert.ok(html.indexOf('js/adventure-content.js') < html.indexOf('js/weekly-stories.js'));
+assert.ok(html.indexOf('js/weekly-stories.js') < html.indexOf('js/adventures.js'));
 assert.ok(html.indexOf('js/adventures.js') < html.indexOf('js/bootstrap.js'));
 assert.ok(load('js/ui.js').includes("if(target === 'adventures') renderAdventures()"));
 assert.ok(load('js/bootstrap.js').includes('initAdventureLibrary();'));
@@ -27,7 +28,11 @@ const ctx=vm.createContext({
   storageGetMultiple:async keys=>Object.fromEntries(keys.map(k=>[k,local.get('g_'+k)||'']))
 });
 vm.runInContext(load('js/adventure-content.js'),ctx);
+ctx.dateKey=()=> '2026-11-15';
+vm.runInContext(load('js/weekly-stories.js'),ctx);
 vm.runInContext(load('js/adventures.js'),ctx);
+// Model-only regression tests: simulate previously purchased permanent access.
+vm.runInContext("weeklyQOwned.ids.push('letters','radio','pizza','museum')",ctx);
 const run=js=>vm.runInContext(js,ctx);
 const quick=run('QUESTY_CHALLENGES'),stories=run('QUESTY_STORIES');
 assert.equal(quick.length,50);assert.equal(stories.length,10);
@@ -101,7 +106,7 @@ assert.equal(run('adventureStoryProgress.radio.node'),'middle');
 assert.equal(ctx.balance,800,'reward ad should not charge Q');
 
 run("adventureView.status='all';adventureView.type='story';adventureView.access='free'");
-assert.equal(run('adventureCatalogItems().length'),7);
+assert.equal(run('adventureCatalogItems().length'),4);
 run("adventureView.mode='group'");
 assert.equal(run('adventureCatalogItems().length'),2);
 run("adventureFavorites.ids.push('q01')");
