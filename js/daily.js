@@ -349,11 +349,11 @@ async function doReroll(){
 
   const st = dailyState[currentCategory];
   if(st.done){
-    showToast('Вы уже выполнили задание — приходите завтра');
+    showToast('Задание уже отмечено как «Сделал»');
     return;
   }
   if(st.skipped){
-    showToast('Задание пропущено — приходите завтра');
+    showToast('Задание уже отмечено как «Не сделал»');
     return;
   }
 
