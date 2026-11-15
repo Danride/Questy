@@ -6,7 +6,7 @@ const ADVENTURE_SKIP_PRICES = Object.freeze({normal:200, hard:350, special:500})
 const ADVENTURE_FAV_KEY = 'questy_adventure_favorites_v1';
 const ADVENTURE_QUICK_KEY = 'questy_quick_results_v1';
 const ADVENTURE_STORY_PREFIX = 'questy_story_v1_';
-const ADVENTURE_STORAGE_KEYS = [ADVENTURE_FAV_KEY, ADVENTURE_QUICK_KEY].concat(QUESTY_STORIES.map(s => ADVENTURE_STORY_PREFIX + s.id));
+const ADVENTURE_STORAGE_KEYS = [ADVENTURE_FAV_KEY, ADVENTURE_QUICK_KEY, WEEKLY_STORIES_KEY, WEEKLY_Q_OWNED_KEY].concat(QUESTY_STORIES.map(s => ADVENTURE_STORY_PREFIX + s.id));
 const ADVENTURE_MODES = {solo:'Один', duo:'Пара', group:'Компания'};
 const ADVENTURE_DIFFICULTIES = {easy:'Легко', medium:'Средне', hard:'Сложно'};
 const adventureView = {page:'catalog', kind:null, id:null, query:'', type:'all', mode:'all', difficulty:'all', duration:'all', access:'all', status:'all', skipOpen:false, confirmRestart:false};
@@ -72,6 +72,7 @@ function adventureApplyRecord(key,raw){
   if(!parsed) return;
   if(key === ADVENTURE_FAV_KEY){ adventureFavorites = adventureSanitizeFavorites(parsed); return; }
   if(key === ADVENTURE_QUICK_KEY){ adventureQuickResults = adventureSanitizeQuick(parsed); return; }
+  if(key === WEEKLY_STORIES_KEY || key === WEEKLY_Q_OWNED_KEY){ weeklyApplyRecord(key,raw); return; }
   const id = key.slice(ADVENTURE_STORY_PREFIX.length);
   const story = adventureStoryById(id);
   if(story) adventureStoryProgress[id] = adventureSanitizeStory(story,parsed);
@@ -79,6 +80,7 @@ function adventureApplyRecord(key,raw){
 function adventureRecordFor(key){
   if(key===ADVENTURE_FAV_KEY) return adventureFavorites;
   if(key===ADVENTURE_QUICK_KEY) return adventureQuickResults;
+  if(key===WEEKLY_STORIES_KEY || key===WEEKLY_Q_OWNED_KEY) return weeklyRecordFor(key);
   return adventureStoryProgress[key.slice(ADVENTURE_STORY_PREFIX.length)] || {updatedAt:0};
 }
 function adventureWrite(key,value){
@@ -96,6 +98,7 @@ function adventureReadLocal(){
   for(const story of QUESTY_STORIES){
     if(!adventureStoryProgress[story.id]) adventureStoryProgress[story.id] = adventureFreshProgress(story);
   }
+  weeklyEnsureCurrent();
 }
 async function syncAdventureStateFromVK(){
   try{
@@ -164,6 +167,9 @@ function adventureCatalogItems(){
     QUESTY_STORIES.map(s=>({kind:'story',item:s}))
   );
   return items.filter(({kind,item})=>{
+    // Only the three weekly stories are offered to new players.
+    // Stories already started, completed or purchased remain in the library.
+    if(kind==='story' && !weeklyCanAccess(item) && !(item.premium && adventureView.access==='premium')) return false;
     if(adventureView.type!=='all' && kind!==adventureView.type) return false;
     if(adventureView.mode!=='all' && item.mode!==adventureView.mode) return false;
     if(adventureView.difficulty!=='all' && item.difficulty!==adventureView.difficulty) return false;
@@ -196,6 +202,7 @@ function renderAdventureCatalog(){
   if(!root)return;
   root.innerHTML='<div class="av-catalog">'+
     '<div class="av-lead"><span class="av-star">✦</span><h2>Выбери приключение</h2><p>Испытания для одного, пары и компании. Без регистрации участников.</p></div>'+
+    ((adventureView.type==='all'||adventureView.type==='story') && adventureView.status==='all' && adventureView.access!=='premium' ? weeklyOfferHtml() : '')+
     '<label class="av-search-label" for="adventureSearch">Поиск приключений</label>'+
     '<input id="adventureSearch" class="av-search" type="search" maxlength="80" placeholder="Название или жанр..." value="'+adventureEscape(adventureView.query)+'">'+
     '<div class="av-filters">'+
@@ -262,6 +269,7 @@ function renderAdventureQuick(quick){
 }
 function adventureStartStory(story){
   if(adventureIsPremiumLocked(story)){ showToast('Покупки премиальных историй подключим на этапе 4'); return; }
+  if(!weeklyCanAccess(story)){ showToast('Открой историю в подборке недели'); return; }
   const p=adventureStoryProgress[story.id];
   if(p.active && story.nodes[p.node] && story.nodes[p.node].type!=='ending'){
     adventureView.page='play';adventureView.skipOpen=false;
@@ -273,7 +281,7 @@ function adventureStartStory(story){
   renderAdventures();
 }
 function adventureRestartStory(story){
-  if(adventureIsPremiumLocked(story))return;
+  if(adventureIsPremiumLocked(story) || !weeklyCanAccess(story))return;
   if(adventureView.page==='play' && !adventureView.confirmRestart){
     adventureView.confirmRestart=true;renderAdventures();return;
   }
@@ -285,16 +293,16 @@ function adventureRestartStory(story){
 }
 function renderAdventureStoryPreview(story){
   const p=adventureStoryProgress[story.id];
-  const locked=adventureIsPremiumLocked(story);
+  const locked=adventureIsPremiumLocked(story) || !weeklyCanAccess(story);
   const endings=p.endings.map(id=>story.nodes[id].title).join(', ');
   return adventureDetailHeader(story.title,story.genre+' · '+ADVENTURE_MODES[story.mode])+
     '<div class="av-story-shell">'+
     '<div class="av-tags"><span>'+story.minutes+' мин</span><span>'+ADVENTURE_DIFFICULTIES[story.difficulty]+'</span>'+
-    '<span>'+(locked?'Премиум · голоса VK':'Бесплатно')+'</span></div>'+
+    '<span>'+(story.premium?'Премиум · голоса VK':weeklyStoryOfferLabel(story))+'</span></div>'+
     '<p class="av-step-text">'+adventureEscape(story.description)+'</p>'+
     '<p class="av-note">История из нескольких этапов с выборами и двумя концовками. Действия выполняются в реальной жизни и подтверждаются кнопкой.</p>'+
     (p.runs?'<p class="av-note">Пройдено '+p.runs+' '+plural(p.runs,'раз','раза','раз')+'. Открытые концовки: '+adventureEscape(endings)+'.</p>':'')+
-    (locked?'<div class="av-locked"><strong>Платное приключение</strong><p>Откроется после подключения подтверждённых покупок голосами VK на этапе 4. Сейчас оплата недоступна.</p></div>':
+    (locked?weeklyUnlockPanel(story):
     '<div class="av-actions"><button class="av-primary" data-av-action="start">'+(p.active?'Продолжить':p.runs?'Пройти снова':'Начать')+'</button>'+
     '<button class="av-secondary" data-av-action="back">К библиотеке</button></div>')+
     '</div>';
@@ -391,7 +399,7 @@ function adventureCompleteQuick(){
 async function adventureSkip(method){
   if(adventureBusy || adventureView.kind!=='story' || adventureView.page!=='play')return;
   const story=adventureStoryById(adventureView.id);
-  if(!story || adventureIsPremiumLocked(story))return;
+  if(!story || adventureIsPremiumLocked(story) || !weeklyCanAccess(story))return;
   const p=adventureStoryProgress[story.id];
   const node=p && story.nodes[p.node];
   if(!p.active||!node||node.type!=='task')return;
@@ -429,6 +437,7 @@ function adventureClick(event){
   if(adventureBusy)return;
   if(act==='back'||act==='pause'){adventureBack();return;}
   if(act==='open'){adventureOpen(btn.dataset.kind,btn.dataset.id);return;}
+  if(act==='weekly-reroll'){weeklyReroll();return;}
   if(act==='favorite'){
     const id=btn.dataset.id;
     if(!adventureQuickById(id) && !adventureStoryById(id))return;
@@ -439,6 +448,15 @@ function adventureClick(event){
   if(act==='quick-done'){adventureCompleteQuick();return;}
   const story=adventureStoryById(adventureView.id);
   if(!story||adventureIsPremiumLocked(story))return;
+  if(act==='weekly-free'){
+    if(weeklyClaim(story)) adventureStartStory(story);
+    else showToast('Бесплатное приключение на эту неделю уже выбрано');
+    return;
+  }
+  if(act==='weekly-buy'){
+    if(weeklyBuy(story)) adventureStartStory(story);
+    return;
+  }
   const p=adventureStoryProgress[story.id];
   if(act==='start'){adventureStartStory(story);return;}
   if(act==='replay'){adventureRestartStory(story);return;}

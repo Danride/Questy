@@ -62,3 +62,26 @@
 @media(min-width:470px){.av-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:340px){.av-card{padding:12px}.av-filter select{padding:6px 4px;font-size:8px}.av-story-shell{padding:14px 11px}}
 @media(prefers-reduced-motion:reduce){.av-open,.av-back,.av-primary,.av-secondary,.av-choice,.av-restart{transition:none}}
+
+/* Weekly adventure selection */
+.weekly-offers{display:flex;flex-direction:column;gap:12px;margin:1px 0 16px}
+.weekly-heading{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.weekly-heading>div{display:flex;flex-direction:column;gap:8px;flex:1;min-width:185px}
+.weekly-eyebrow{font-size:8px;color:var(--accent);letter-spacing:.18em}
+.weekly-heading h2{font-size:14px;font-weight:400;line-height:1.6}
+.weekly-heading p{font-size:9px;line-height:1.75;opacity:.7}
+.weekly-reroll{border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);padding:11px 12px;font:9px 'Unbounded',sans-serif;cursor:pointer}
+.weekly-reroll:disabled{opacity:.4;pointer-events:none}
+.weekly-grid{display:grid;grid-template-columns:1fr;gap:9px}
+.weekly-card{border:1px solid var(--line);border-radius:14px;background:rgba(20,20,24,.63);padding:13px;display:flex;flex-direction:column;gap:10px}
+.weekly-card:first-child{border-color:var(--accent)}
+.weekly-card-top,.weekly-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:9px}
+.weekly-card-top{font-size:8px;letter-spacing:.1em;color:var(--accent)}
+.weekly-index{font-size:14px;opacity:.6}
+.weekly-card h3{font-size:12px;font-weight:400;line-height:1.6}
+.weekly-card p{font-size:9px;opacity:.7;line-height:1.8}
+.weekly-card-bottom{padding-top:10px;border-top:1px solid var(--line-soft)}
+.weekly-card-bottom span{font-size:9px;color:var(--accent)}
+.weekly-card-bottom .av-open{font-size:8px;padding:9px 10px;max-width:55%}
+.weekly-card-bottom .av-open:disabled{opacity:.4;pointer-events:none}
+@media(min-width:470px){.weekly-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
