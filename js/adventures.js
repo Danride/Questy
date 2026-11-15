@@ -6,7 +6,7 @@ const ADVENTURE_SKIP_PRICES = Object.freeze({normal:200, hard:350, special:500})
 const ADVENTURE_FAV_KEY = 'questy_adventure_favorites_v1';
 const ADVENTURE_QUICK_KEY = 'questy_quick_results_v1';
 const ADVENTURE_STORY_PREFIX = 'questy_story_v1_';
-const ADVENTURE_STORAGE_KEYS = [ADVENTURE_FAV_KEY, ADVENTURE_QUICK_KEY, WEEKLY_STORIES_KEY, WEEKLY_Q_OWNED_KEY].concat(QUESTY_STORIES.map(s => ADVENTURE_STORY_PREFIX + s.id));
+const ADVENTURE_STORAGE_KEYS = [ADVENTURE_FAV_KEY, ADVENTURE_QUICK_KEY, WEEKLY_STORIES_KEY, WEEKLY_Q_OWNED_KEY, MARATHON_SAVE_KEY].concat(QUESTY_STORIES.map(s => ADVENTURE_STORY_PREFIX + s.id));
 const ADVENTURE_MODES = {solo:'Один', duo:'Пара', group:'Компания'};
 const ADVENTURE_DIFFICULTIES = {easy:'Легко', medium:'Средне', hard:'Сложно'};
 const adventureView = {page:'catalog', kind:null, id:null, query:'', type:'all', mode:'all', difficulty:'all', duration:'all', access:'all', status:'all', skipOpen:false, confirmRestart:false};
@@ -73,6 +73,7 @@ function adventureApplyRecord(key,raw){
   if(key === ADVENTURE_FAV_KEY){ adventureFavorites = adventureSanitizeFavorites(parsed); return; }
   if(key === ADVENTURE_QUICK_KEY){ adventureQuickResults = adventureSanitizeQuick(parsed); return; }
   if(key === WEEKLY_STORIES_KEY || key === WEEKLY_Q_OWNED_KEY){ weeklyApplyRecord(key,raw); return; }
+  if(key === MARATHON_SAVE_KEY){ marathonApplyRecord(raw); return; }
   const id = key.slice(ADVENTURE_STORY_PREFIX.length);
   const story = adventureStoryById(id);
   if(story) adventureStoryProgress[id] = adventureSanitizeStory(story,parsed);
@@ -81,6 +82,7 @@ function adventureRecordFor(key){
   if(key===ADVENTURE_FAV_KEY) return adventureFavorites;
   if(key===ADVENTURE_QUICK_KEY) return adventureQuickResults;
   if(key===WEEKLY_STORIES_KEY || key===WEEKLY_Q_OWNED_KEY) return weeklyRecordFor(key);
+  if(key===MARATHON_SAVE_KEY)return marathonRecordFor();
   return adventureStoryProgress[key.slice(ADVENTURE_STORY_PREFIX.length)] || {updatedAt:0};
 }
 function adventureWrite(key,value){
@@ -119,6 +121,9 @@ async function syncAdventureStateFromVK(){
     }
     if(adventureView.page==='catalog') renderAdventureCards();
     else renderAdventures();
+    marathonRefresh();
+    renderMarathons();
+    renderMyAdventures();
   }catch(e){ console.warn('[Adventure VK sync]',e); }
 }
 function initAdventureLibrary(){
