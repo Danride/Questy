@@ -912,11 +912,6 @@ button:focus-visible,[tabindex]:focus-visible{
         <div class="streak-hint" id="streakHint">Выполняй задание каждый день</div>
       </div>
 
-      <div class="history-block">
-        <div class="history-title">История</div>
-        <div id="historyList"></div>
-      </div>
-
       <div class="goals-section">
         <div class="goals-head">
           <div class="history-title">Мои цели</div>
@@ -939,6 +934,11 @@ button:focus-visible,[tabindex]:focus-visible{
         </div>
         <div id="goalsList" class="goals-list"></div>
         <p class="goals-note">Отмечай шаги в своём темпе. За них не начисляется Q.</p>
+      </div>
+
+      <div class="history-block">
+        <div class="history-title">История</div>
+        <div id="historyList"></div>
       </div>
     </section>
 
@@ -2736,6 +2736,7 @@ document.getElementById('goalAdd').addEventListener('click',()=>{
 document.getElementById('goalTitle').addEventListener('keydown',e=>{
   if(e.key==='Enter')document.getElementById('goalAdd').click();
 });
+let pendingGoalDelete = null;
 document.getElementById('goalsList').addEventListener('click',e=>{
   const btn=e.target.closest('button[data-action]');if(!btn || !appReady)return;
   const i=personalGoals.findIndex(g=>g.id===btn.dataset.id);
@@ -2747,6 +2748,13 @@ document.getElementById('goalsList').addEventListener('click',e=>{
       goalsFinished++;saveGoalsFinished();renderAchievements();showToast('Цель достигнута!');
     }else showToast('Шаг отмечен');
   }else if(btn.dataset.action==='delete'){
+    const now=Date.now();
+    if(!pendingGoalDelete || pendingGoalDelete.id!==g.id || now-pendingGoalDelete.at>4000){
+      pendingGoalDelete={id:g.id,at:now};
+      showToast('Нажми «Удалить» ещё раз для подтверждения');
+      return;
+    }
+    pendingGoalDelete=null;
     personalGoals.splice(i,1);
     showToast('Цель удалена');
   }else return;
