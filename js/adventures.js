@@ -173,10 +173,10 @@ function adventureCatalogItems(){
     if(adventureView.duration==='medium' && (item.minutes<=10 || item.minutes>25)) return false;
     if(adventureView.duration==='long' && item.minutes<=25) return false;
     const status=adventureStatus(kind,item.id);
-    if(adventureView.status==='done' && status!=='done') return false;
+    if(adventureView.status==='done' && !(status==='done' || (kind==='story' && adventureStoryProgress[item.id] && adventureStoryProgress[item.id].runs>0))) return false;
     if(adventureView.status==='progress' && status!=='progress') return false;
     if(adventureView.status==='favorites' && !adventureFavorites.ids.includes(item.id)) return false;
-    if(query && !(item.title+' '+item.description+' '+(item.genre||'')).toLocaleLowerCase('ru').includes(query)) return false;
+    if(query && !(item.title+' '+(item.description||item.text||'')+' '+(item.genre||'')).toLocaleLowerCase('ru').includes(query)) return false;
     return true;
   }).sort((a,b)=>{
     const favourite=Number(adventureFavorites.ids.includes(b.item.id))-Number(adventureFavorites.ids.includes(a.item.id));
@@ -305,7 +305,7 @@ function adventureStepHistory(story,p){
     const node=story.nodes[entry.id];
     const note=entry.kind==='skipped'?'Пропущено':entry.kind==='choice'?'Решение':'Выполнено';
     const choice=entry.kind==='choice' && node.options && node.options[entry.choice] ? ': '+node.options[entry.choice].label : '';
-    return '<li><span>'+String(index+1)+'. '+adventureEscape(node.title)+'</span><small>'+note+adventureEscape(choice)+'</small></li>';
+    return '<li><span>'+String(index+1)+'. '+adventureEscape(node.title)+'</span><p>'+adventureEscape(node.text)+'</p><small>'+note+adventureEscape(choice)+'</small></li>';
   }).join('');
   const endings=p.endings.map(id=>'<li><span>'+adventureEscape(story.nodes[id].title)+'</span><small>Открыта концовка</small></li>').join('');
   return '<details class="av-history"><summary>История прохождения ('+p.path.length+')</summary><ol>'+history+endings+'</ol></details>';
@@ -426,7 +426,7 @@ function adventureClick(event){
   const btn=event.target.closest('button[data-av-action]');
   if(!btn || !document.getElementById('adventureApp').contains(btn))return;
   const act=btn.dataset.avAction;
-  if(adventureBusy && act!=='back')return;
+  if(adventureBusy)return;
   if(act==='back'||act==='pause'){adventureBack();return;}
   if(act==='open'){adventureOpen(btn.dataset.kind,btn.dataset.id);return;}
   if(act==='favorite'){
