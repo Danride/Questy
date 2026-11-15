@@ -19,11 +19,13 @@ const ctx=vm.createContext({
   balance:600,saveBalance:()=>saves++,updateBalanceUI:()=>{},updateMiningUI:()=>{},
   storageGetMultiple:async keys=>Object.fromEntries(keys.map(k=>[k,local.get('g_'+k)||'']))
 });
-for(const file of ['js/adventure-content.js','js/weekly-stories.js','js/adventures.js']){
+for(const file of ['js/adventure-content.js','js/weekly-stories.js','js/marathon-content.js','js/marathons.js','js/adventures.js']){
   vm.runInContext(read(file),ctx,{filename:file});
 }
 const run=js=>vm.runInContext(js,ctx);
 run('initAdventureLibrary()');
+assert.equal((run('renderAdventures(),document.getElementById("adventureApp").innerHTML').match(/<article class="weekly-card"/g)||[]).length,3,'exactly three visible adventures');
+assert.ok(!target.innerHTML.includes('adventureSearch') && !target.innerHTML.includes('av-grid'),'full catalog must remain hidden');
 
 assert.equal(run('weeklyKey()'),'2026-11-09','week must start Monday');
 assert.equal(run('weeklyStories.slots.length'),3);

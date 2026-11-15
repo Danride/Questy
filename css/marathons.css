@@ -1,0 +1,35 @@
+/* Questy 2.0 / Stage 3 — calendar marathons, restrained Unbounded dark palette */
+.marathon-section,.calendar-quick,.my-adventures{width:100%;max-width:400px;flex-shrink:0}
+.marathon-section{padding:0 2px 8px}
+.marathon-heading{display:flex;flex-direction:column;gap:7px;margin:12px 0 12px;text-align:left}
+.marathon-heading h2{font-size:12px;letter-spacing:.14em;font-weight:400;color:var(--accent)}
+.marathon-heading p{font-size:9px;line-height:1.75;opacity:.75}
+.marathon-list{display:flex;flex-direction:column;gap:10px}
+.marathon-card{padding:13px 12px;border-radius:14px;border:1px solid var(--line-soft);background:rgba(20,20,24,.45);text-align:left;display:flex;flex-direction:column;gap:10px}
+.marathon-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.marathon-card-head>div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.marathon-card-head h3{font-weight:400;font-size:10px;line-height:1.65}
+.marathon-card-head span{font-size:8px;opacity:.65}
+.marathon-card-head button,.calendar-quick button{flex-shrink:0;cursor:pointer;background:transparent;border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:'Unbounded',sans-serif;font-size:8px;padding:10px 11px}
+.marathon-card>p{font-size:9px;line-height:1.75;opacity:.75}
+.marathon-status{font-size:8px;letter-spacing:.05em;color:var(--accent)}
+.marathon-detail{padding-top:11px;border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:12px}
+.marathon-hint{font-size:9px;line-height:1.8;opacity:.8}
+.marathon-progress{font-size:9px;color:var(--accent)}
+.marathon-today{display:flex;flex-direction:column;gap:10px}
+.marathon-today span{font-size:9px;letter-spacing:.12em;color:var(--accent)}
+.marathon-today p{font-size:10px;line-height:1.9}
+.marathon-history{border-top:1px solid var(--line-soft);padding-top:9px;font-size:9px}
+.marathon-history summary{cursor:pointer;color:var(--accent);padding:5px 0}
+.marathon-history ol{margin:7px 0 0 15px;padding:0;display:flex;flex-direction:column;gap:8px}
+.marathon-history li{font-size:8px;line-height:1.65;opacity:.78}
+.calendar-quick{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:12px;border:1px solid var(--line-soft);border-radius:12px}
+.calendar-quick>div{min-width:0;display:flex;flex-direction:column;gap:6px}
+.calendar-quick strong{font-size:9px;font-weight:400}
+.calendar-quick p{font-size:8px;line-height:1.65;opacity:.7}
+.my-adventures{display:flex;flex-direction:column;gap:11px;text-align:left}
+#myAdventures{display:flex;flex-direction:column;gap:7px}
+.my-story-button{display:flex;align-items:center;justify-content:space-between;gap:9px;text-align:left;border:1px solid var(--line-soft);background:transparent;border-radius:11px;color:var(--ink);padding:12px;cursor:pointer;font-family:'Unbounded',sans-serif}
+.my-story-button span{font-size:9px;line-height:1.7}
+.my-story-button small{font-size:8px;opacity:.7;flex-shrink:0}
+@media(max-width:360px){.calendar-quick{flex-direction:column;align-items:stretch}.calendar-quick button{width:100%}.my-story-button{flex-wrap:wrap}}

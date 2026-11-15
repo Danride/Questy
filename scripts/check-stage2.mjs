@@ -7,7 +7,10 @@ const load = file => fs.readFileSync(file,'utf8');
 const html=load('index.html');
 assert.ok(html.includes('id="adventureApp"') && html.includes('css/adventures.css'));
 assert.ok(html.indexOf('js/adventure-content.js') < html.indexOf('js/weekly-stories.js'));
-assert.ok(html.indexOf('js/weekly-stories.js') < html.indexOf('js/adventures.js'));
+assert.ok(html.indexOf('js/weekly-stories.js') < html.indexOf('js/marathon-content.js'));
+assert.ok(html.indexOf('js/marathon-content.js') < html.indexOf('js/marathons.js'));
+assert.ok(html.indexOf('js/marathons.js') < html.indexOf('js/adventures.js'));
+assert.ok(html.includes('id="marathonApp"') && html.includes('id="myAdventures"'));
 assert.ok(html.indexOf('js/adventures.js') < html.indexOf('js/bootstrap.js'));
 assert.ok(load('js/ui.js').includes("if(target === 'adventures') renderAdventures()"));
 assert.ok(load('js/bootstrap.js').includes('initAdventureLibrary();'));
@@ -30,6 +33,8 @@ const ctx=vm.createContext({
 vm.runInContext(load('js/adventure-content.js'),ctx);
 ctx.dateKey=()=> '2026-11-15';
 vm.runInContext(load('js/weekly-stories.js'),ctx);
+vm.runInContext(load('js/marathon-content.js'),ctx);
+vm.runInContext(load('js/marathons.js'),ctx);
 vm.runInContext(load('js/adventures.js'),ctx);
 // Model-only regression tests: simulate previously purchased permanent access.
 vm.runInContext("weeklyQOwned.ids.push('letters','radio','pizza','museum')",ctx);

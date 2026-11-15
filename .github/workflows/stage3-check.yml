@@ -1,0 +1,15 @@
+name: Questy stage 3 checks
+on:
+  pull_request:
+  push:
+    branches:
+      - feature/questy-stage3-marathons-hidden-catalog-20261115
+jobs:
+  marathon-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-stage3.mjs

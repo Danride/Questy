@@ -58,7 +58,9 @@ function renderAchievements(){
     ['◈','Неделя','Серия из 7 дней',bestStreak>=7],
     ['✴','Месяц','Серия из 30 дней',bestStreak>=30],
     ['⬡','Целеустремлённый','Доведи 3 личные цели до конца',goalsFinished>=3],
-    ['◇','Коллекционер','Выполни 60 заданий',totalDone>=60]
+    ['◇','Коллекционер','Выполни 60 заданий',totalDone>=60],
+    ['✧','Путешественник','Закончи первое сюжетное приключение',QUESTY_STORIES.some(s=>adventureStoryProgress[s.id] && adventureStoryProgress[s.id].runs>0)],
+    ['◉','Марафонец','Заверши первый марафон',marathonCompletedCount()>0]
   ];
   document.getElementById('achievementsCounter').textContent=items.filter(x=>x[3]).length+' / '+items.length;
   items.forEach(a=>{

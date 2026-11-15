@@ -30,6 +30,8 @@ function initViewRestoreSync(){
       const active = document.querySelector('.screen.active');
       if(active && active.dataset.screen === 'mining') renderMining();
       syncAdventureStateFromVK();
+      marathonRefresh();
+      renderMarathons();
     });
   });
 }
@@ -51,6 +53,8 @@ async function checkDayChange(){
     switchCategory(nextCategory);
     refreshAll();
     renderCalendar();
+    renderMarathons();
+    renderAdventures();
     renderMining();
   }catch(e){console.warn('[Day rollover]',e);}
   finally{daySyncing=false;}
@@ -94,6 +98,7 @@ async function startApp(){
   migrateLegacyStorage();
   loadProgressFromLocal();
   initAdventureLibrary();
+  initMarathons();
   lastRenderedDay = dateKey();
   appReady = true;
   switchCategory('normal');

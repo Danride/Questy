@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="css/features.css">
 <link rel="stylesheet" href="css/navigation.css">
 <link rel="stylesheet" href="css/adventures.css">
+<link rel="stylesheet" href="css/marathons.css">
 </head>
 <body>
 
@@ -177,6 +178,12 @@
         <div class="cal-grid" id="calGrid"></div>
       </div>
 
+      <div class="calendar-quick">
+        <div><strong>Быстрое испытание</strong><p>Получить случайное задание, не заглядывая в общий список.</p></div>
+        <button type="button" id="randomQuickBtn">Случайное испытание</button>
+      </div>
+      <section class="marathon-section" aria-label="Марафоны" id="marathonApp"></section>
+
       <div class="streak-block">
         <div class="sb-title">Серия · 7 дней</div>
         <div class="streak-dots" id="streakDots"></div>
@@ -277,6 +284,11 @@
         <div id="achievementsList" class="achievements-grid"></div>
       </div>
 
+      <section class="my-adventures">
+        <div class="history-title">Мои приключения</div>
+        <p class="av-note">Только уже открытые истории. Будущие сюжеты остаются тайной.</p>
+        <div id="myAdventures"></div>
+      </section>
       <button class="share-btn" id="shareBtn">Поделиться прогрессом</button>
     </section>
 
@@ -308,7 +320,7 @@
     <div class="welcome-mark" aria-hidden="true">✦</div>
     <h2 id="welcomeTitle">Твой день — твой квест</h2>
     <p>Открывай случайное задание, пробуй новое и отмечай события, которые хочется запомнить.</p>
-    <p>Создавай личные цели в календаре и собирай достижения. Новые приключения появятся в отдельной библиотеке.</p>
+    <p>Каждую неделю тебя ждут только три новых приключения. Марафоны ищи в календаре — новый день, новое задание.</p>
     <p class="welcome-note">Q можно собирать в разделе «Добыча» и тратить на оформление. За отметку «Сделал» монеты не выдаются.</p>
     <button id="welcomeStart" class="btn-action done">Начать приключение</button>
   </div>
@@ -327,6 +339,8 @@
 <script src="js/calendar-shop.js"></script>
 <script src="js/adventure-content.js"></script>
 <script src="js/weekly-stories.js"></script>
+<script src="js/marathon-content.js"></script>
+<script src="js/marathons.js"></script>
 <script src="js/adventures.js"></script>
 <script src="js/bootstrap.js"></script>
 </body>
